@@ -1,0 +1,254 @@
+use log::{debug, error, info, warn};
+use crate::config::{Config, Zone};
+
+use std::io::BufReader;
+use std::fs::File;
+use std::io::Write;
+use std::process::Command;
+use std::process::Stdio;
+use std::path::Path;
+use rand::{distributions::Alphanumeric, Rng}; 
+
+use warp::Filter;
+
+use askama::Template;
+use std::path::PathBuf;
+use std::io::BufRead;
+
+use chrono::{DateTime, Utc};
+use chrono::NaiveDateTime;
+
+use sha2::{Sha256, Sha512, Digest};
+use regex::Regex;
+
+mod config;
+
+#[tokio::main]
+async fn main() {
+    env_logger::init();
+
+    let args = clap::App::new("concealed")
+        .arg(
+            clap::Arg::with_name("config")
+                .long("config")
+                .help("Path to JSON config file")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            clap::Arg::with_name("config-check")
+                .long("config-check")
+                .help("Whether to just parse and check the config file and exit")
+                .takes_value(false)
+                .required(false),
+        );
+
+    let m = args.get_matches();
+
+    let file_path = m.value_of("config").unwrap();
+    let file = File::open(&file_path).unwrap();
+    let reader = BufReader::new(file);
+    let config: Config = serde_json::from_reader(reader).unwrap();
+
+    if m.is_present("config-check") {
+        std::process::exit(0);
+    }
+
+    tokio::join!(
+        reconcile_zones(&config),
+        spawn_api_server(&config),
+    );
+}
+
+async fn reconcile_zones(config: &Config) {
+    let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(5));
+
+    let (reload_cmd_str, args) = config.named_reload_command.split_first().unwrap();
+
+    let mut reload_cmd = Command::new(reload_cmd_str);
+    reload_cmd.stderr(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .args(args); 
+
+    loop {
+        std::fs::create_dir_all(&config.zone_file_dir).unwrap();
+        let now = Utc::now();
+        let serial = now.timestamp() as u32;
+        let mut changes_made = false;
+        for (n, z) in &config.zones {
+            changes_made = changes_made || render_zonefile(&config, &n, &z, serial);
+        }
+        debug!("reconciled {} zones", config.zones.len());
+        if changes_made {
+            info!("executing reload command: {:?}", &reload_cmd);
+            let status = reload_cmd.status().unwrap();
+            if !status.success() {
+                error!("named reload failed with exit code: {:?}", &status.code());
+            }
+        }
+        interval.tick().await;
+    }
+}
+
+async fn spawn_api_server(config: &Config) {
+    let hello = warp::put()
+        .and(warp::path!(String / "TXT" / String))
+        .and(warp::body::content_length_limit(1024 * 16))
+        .and(warp::body::bytes())
+        .map(|zone: String, name: String, bytes: bytes::Bytes| {
+            format!("Not authority for zone: {}", zone) //TODO
+        });
+
+    warp::serve(hello)
+        .run(([127, 0, 0, 1], config.api_tcp_listen_port))
+        .await;
+}
+
+fn render_zonefile(config: &Config, name: &str, zone: &Zone, serial: u32) -> bool {
+    let mut changes_made = false;
+
+    #[derive(Template)]
+    #[template(path = "template.zone", escape = "none")]
+    struct ZoneTemplate<'a> {
+        name: &'a str,
+        zone: &'a Zone,
+        serial: u32,
+    }
+
+    let template_normalized = ZoneTemplate{
+        name,
+        zone,
+        serial: 0,
+    };
+    let normalized_rendered = template_normalized.render().unwrap();
+    let mut hasher = Sha256::new();
+    hasher.update(normalized_rendered.as_bytes());
+    let digest = format!("{:x}", hasher.finalize());
+
+    let template = ZoneTemplate{
+        name,
+        zone,
+        serial,
+    };
+
+    let final_path = config.zone_file_dir.join(format!("{}.zone", &name));
+    let temp_path = config.zone_file_dir.join(format!("{}.zone", &digest));
+
+    let link_target = std::fs::read_link(&final_path).unwrap_or(PathBuf::new());
+
+    if link_target != temp_path || !link_target.exists() {
+        info!("symlinking new zonefile: {}, {}", &name, &digest);
+        let mut f = File::create(&temp_path).unwrap();
+        f.write_all(template.render().unwrap().as_bytes()).unwrap();
+        symlink_in_place(&temp_path, &final_path);
+        changes_made = true;
+    } else {
+        debug!("not changing symlink: {:?}", &temp_path);
+    }
+    // zone needs signing
+    if let Some(key_dir) = zone.dnssec_key_directory.as_ref() {
+        let signed_temp_path = config.zone_file_dir.join(format!("{}.signed", &digest));
+        let signed_final_path = config.zone_file_dir.join(format!("{}.signed", &name));
+
+        let signed_link_target = std::fs::read_link(&signed_final_path).unwrap_or(PathBuf::new());
+
+        let rrsig_validity_seconds = if signed_link_target.exists() && signed_link_target == signed_temp_path {
+            find_nearest_rrsig_expiry(&signed_link_target)
+        } else {
+            0
+        };
+
+        if rrsig_validity_seconds < 60*60*24*7 { // less than 7 days
+            let mut cmd = Command::new("dnssec-signzone");
+
+                cmd.stderr(Stdio::inherit())
+                .stdout(Stdio::inherit())
+                .arg("-N")
+                .arg("keep")
+                .arg("-T")
+                .arg("300") // TTL
+                .arg("-t")
+                .arg("-o")
+                .arg(&name)
+                .arg("-f")
+                .arg(&signed_temp_path)
+                .arg("-K")
+                .arg(&key_dir)
+                .arg("-S")
+                .arg(&final_path);
+
+            info!("executing: {:?}", &cmd);
+            
+            let status = cmd.status().unwrap();
+            
+            if status.success() {
+                symlink_in_place(&signed_temp_path, &signed_final_path);
+                info!("sucessfully signed zone: {} to output path: {:?}", &name, &signed_final_path);
+                changes_made = true;
+            } else {
+                error!("dnssec signing failed for zone: {} with exit code: {:?}", &name, &status.code());
+            }
+        } else {
+            debug!("not changing symlink: {:?}", &signed_temp_path);
+        }
+    }
+    changes_made
+}
+
+fn symlink_in_place(from: &Path, to: &Path) {
+    let dir = to.parent().unwrap();
+
+    let s: String = rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(7)
+        .map(char::from)
+        .collect();
+
+    let temp_path = dir.join(s);
+    std::os::unix::fs::symlink(from, &temp_path).unwrap();
+    std::fs::rename(&temp_path, &to).unwrap();
+}
+
+fn find_nearest_rrsig_expiry(path: &Path) -> i64 {
+    let re_pre = Regex::new(r"^[^\s]*\s+[0-9]+\s+RRSIG.+").unwrap();
+    let re_now = Regex::new(r"^\s+([0-9]{14}) [0-9]{14}").unwrap();
+    let utc = Utc::now();
+    let now = utc.naive_utc();
+
+    let file = File::open(path).unwrap();
+    let lines = std::io::BufReader::new(file).lines();
+    let mut rrsig_upcoming = false;
+    let mut soonest_expiry = i64::MAX;
+    let mut line_number = 0;
+    for line in lines {
+        line_number = line_number+1;
+        let current_expiry = if let Ok(l) = line {
+            if rrsig_upcoming {
+                rrsig_upcoming = false;
+                if let Some(m) = re_now.captures(&l) {
+                    if let Some(expiry_string) = m.get(1) {
+                        debug!("trying to date-parse: '{}'", expiry_string.as_str());
+                        let parsed = NaiveDateTime::parse_from_str(expiry_string.as_str(), "%Y%m%d%H%M%S").unwrap();
+                        parsed.signed_duration_since(now).num_seconds()
+                    } else {
+                        warn!("parse error, rrsig string time parsable: {}, line: {}", &l, line_number);
+                        0
+                    }
+                } else {
+                    warn!("parse error, rrsig string not matching: {}, line: {}", &l, line_number);
+                    0
+                }
+            } else {
+                rrsig_upcoming = re_pre.is_match(&l);
+                i64::MAX
+            }
+        } else {
+            warn!("read error, no line to read");
+            0
+        };
+        if current_expiry < soonest_expiry {
+            soonest_expiry = current_expiry;
+        }
+    }
+    soonest_expiry
+}

@@ -1,0 +1,156 @@
+{
+  "named_reload_command": [
+    "sudo",
+    "/run/current-system/sw/bin/reload-bind"
+  ],
+  "zone_file_dir": "/zones",
+  "zones": {
+    "kronborgthomsen.dk": {
+      "apex": [
+        {
+          "target": "ns1.example.de",
+          "ttl": "5m",
+          "ttlSeconds": 300,
+          "type": "NS"
+        },
+        {
+          "target": "ns2.example.de",
+          "ttl": "5m",
+          "ttlSeconds": 300,
+          "type": "NS"
+        },
+        {
+          "target": "ns3.example.de",
+          "ttl": "5m",
+          "ttlSeconds": 300,
+          "type": "NS"
+        },
+        {
+          "target": "1.2.3.4",
+          "ttl": "5m",
+          "ttlSeconds": 300,
+          "type": "A"
+        },
+        {
+          "target": "abcd:1234:4321:efba",
+          "ttl": "5m",
+          "ttlSeconds": 300,
+          "type": "AAAA"
+        }
+      ],
+      "dnssecKeyDirectory": null,
+      "expire": "1w",
+      "extraNotifys": [
+        "8.8.4.4"
+      ],
+      "records": {},
+      "refresh": "1h",
+      "retry": "5m",
+      "server": "ns1.example.de",
+      "ttl": "2m",
+      "updatePolicies": []
+    },
+    "example.dk": {
+      "apex": [
+        {
+          "target": "ns1.example.de",
+          "ttl": "5m",
+          "ttlSeconds": 300,
+          "type": "NS"
+        },
+        {
+          "target": "ns2.example.de",
+          "ttl": "5m",
+          "ttlSeconds": 300,
+          "type": "NS"
+        },
+        {
+          "target": "ns3.example.de",
+          "ttl": "5m",
+          "ttlSeconds": 300,
+          "type": "NS"
+        },
+        {
+          "target": "1.2.3.4",
+          "ttl": "5m",
+          "ttlSeconds": 300,
+          "type": "A"
+        },
+        {
+          "target": "abcd:1234:4321:efba",
+          "ttl": "5m",
+          "ttlSeconds": 300,
+          "type": "AAAA"
+        }
+      ],
+      "dnssecKeyDirectory": "/keys/example.dk",
+      "expire": "1w",
+      "extraNotifys": [
+        "8.8.4.4"
+      ],
+      "records": {
+        "corona": [
+          {
+            "target": "server.example.dk",
+            "ttl": "5m",
+            "ttlSeconds": 300,
+            "type": "CNAME"
+          }
+        ]
+      },
+      "refresh": "1h",
+      "retry": "5m",
+      "server": "ns1.example.de",
+      "ttl": "2m",
+      "updatePolicies": []
+    },
+    "wharfix.dev": {
+      "apex": [
+        {
+          "target": "ns1.example.de",
+          "ttl": "5m",
+          "ttlSeconds": 300,
+          "type": "NS"
+        },
+        {
+          "target": "ns2.example.de",
+          "ttl": "5m",
+          "ttlSeconds": 300,
+          "type": "NS"
+        },
+        {
+          "target": "ns3.example.de",
+          "ttl": "5m",
+          "ttlSeconds": 300,
+          "type": "NS"
+        },
+        {
+          "target": "1.2.3.4",
+          "ttl": "5m",
+          "ttlSeconds": 300,
+          "type": "A"
+        }
+      ],
+      "dnssecKeyDirectory": null,
+      "expire": "1w",
+      "extraNotifys": [
+        "8.8.4.4"
+      ],
+      "records": {
+        "*": [
+          {
+            "target": "1.2.3.4",
+            "ttl": "5m",
+            "ttlSeconds": 300,
+            "type": "A"
+          }
+        ]
+      },
+      "refresh": "1h",
+      "retry": "5m",
+      "server": "ns1.example.de",
+      "ttl": "2m",
+      "updatePolicies": []
+    }
+  }
+}
