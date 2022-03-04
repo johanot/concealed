@@ -15,10 +15,10 @@ use askama::Template;
 use std::path::PathBuf;
 use std::io::BufRead;
 
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use chrono::NaiveDateTime;
 
-use sha2::{Sha256, Sha512, Digest};
+use sha2::{Sha256, Digest};
 use regex::Regex;
 
 mod config;
@@ -74,12 +74,15 @@ async fn reconcile_zones(config: &Config) {
         std::fs::create_dir_all(&config.zone_file_dir).unwrap();
         let now = Utc::now();
         let serial = now.timestamp() as u32;
-        let mut changes_made = false;
+        let mut reload_needed = false;
         for (n, z) in &config.zones {
-            changes_made = changes_made || render_zonefile(&config, &n, &z, serial);
+            let (content, digest) = render_zonefile(&n, &z, serial);
+            let changed = maybe_persist(&config, &n, &content, &digest);
+            let signed = maybe_sign(&config, &n, &z, &digest, changed);
+            reload_needed = reload_needed || changed || signed;
         }
-        debug!("reconciled {} zones", config.zones.len());
-        if changes_made {
+
+        if reload_needed {
             info!("executing reload command: {:?}", &reload_cmd);
             let status = reload_cmd.status().unwrap();
             if !status.success() {
@@ -95,7 +98,7 @@ async fn spawn_api_server(config: &Config) {
         .and(warp::path!(String / "TXT" / String))
         .and(warp::body::content_length_limit(1024 * 16))
         .and(warp::body::bytes())
-        .map(|zone: String, name: String, bytes: bytes::Bytes| {
+        .map(|zone: String, _name: String, _bytes: bytes::Bytes| {
             format!("Not authority for zone: {}", zone) //TODO
         });
 
@@ -104,8 +107,7 @@ async fn spawn_api_server(config: &Config) {
         .await;
 }
 
-fn render_zonefile(config: &Config, name: &str, zone: &Zone, serial: u32) -> bool {
-    let mut changes_made = false;
+fn render_zonefile(name: &str, zone: &Zone, serial: u32) -> (String, String) {
 
     #[derive(Template)]
     #[template(path = "template.zone", escape = "none")]
@@ -131,6 +133,10 @@ fn render_zonefile(config: &Config, name: &str, zone: &Zone, serial: u32) -> boo
         serial,
     };
 
+    (template.render().unwrap(), digest)
+}
+
+fn maybe_persist(config: &Config, name: &str, content: &str, digest: &str) -> bool {
     let final_path = config.zone_file_dir.join(format!("{}.zone", &name));
     let temp_path = config.zone_file_dir.join(format!("{}.zone", &digest));
 
@@ -139,27 +145,29 @@ fn render_zonefile(config: &Config, name: &str, zone: &Zone, serial: u32) -> boo
     if link_target != temp_path || !link_target.exists() {
         info!("symlinking new zonefile: {}, {}", &name, &digest);
         let mut f = File::create(&temp_path).unwrap();
-        f.write_all(template.render().unwrap().as_bytes()).unwrap();
+        f.write_all(content.as_bytes()).unwrap();
         symlink_in_place(&temp_path, &final_path);
-        changes_made = true;
+        true
     } else {
         debug!("not changing symlink: {:?}", &temp_path);
+        false
     }
-    // zone needs signing
-    if let Some(key_dir) = zone.dnssec_key_directory.as_ref() {
-        let signed_temp_path = config.zone_file_dir.join(format!("{}.signed", &digest));
-        let signed_final_path = config.zone_file_dir.join(format!("{}.signed", &name));
+}
 
-        let signed_link_target = std::fs::read_link(&signed_final_path).unwrap_or(PathBuf::new());
+fn maybe_sign(config: &Config, name: &str, zone: &Zone, digest: &str, upstream_changes: bool) -> bool {
+    match &zone.dnssec_key_directory {
+        Some(key_dir) => {
+            let final_path = config.zone_file_dir.join(format!("{}.zone", &digest));
+            let signed_temp_path = config.zone_file_dir.join(format!("{}.signed", &digest));
+            let signed_final_path = config.zone_file_dir.join(format!("{}.signed", &name));
+            let signed_link_target = std::fs::read_link(&signed_final_path).unwrap_or(PathBuf::new());
 
-        let rrsig_validity_seconds = if signed_link_target.exists() && signed_link_target == signed_temp_path {
-            find_nearest_rrsig_expiry(&signed_link_target)
-        } else {
-            0
-        };
-
-        if rrsig_validity_seconds < 60*60*24*7 { // less than 7 days
-            let mut cmd = Command::new("dnssec-signzone");
+            if upstream_changes ||
+                !signed_link_target.exists() ||
+                signed_link_target != signed_temp_path ||
+                find_nearest_rrsig_expiry(&signed_link_target) < 60*60*24*7 // 7 days
+            {
+                let mut cmd = Command::new("dnssec-signzone");
 
                 cmd.stderr(Stdio::inherit())
                 .stdout(Stdio::inherit())
@@ -177,22 +185,24 @@ fn render_zonefile(config: &Config, name: &str, zone: &Zone, serial: u32) -> boo
                 .arg("-S")
                 .arg(&final_path);
 
-            info!("executing: {:?}", &cmd);
-            
-            let status = cmd.status().unwrap();
-            
-            if status.success() {
-                symlink_in_place(&signed_temp_path, &signed_final_path);
-                info!("sucessfully signed zone: {} to output path: {:?}", &name, &signed_final_path);
-                changes_made = true;
+                info!("executing: {:?}", &cmd);
+
+                let status = cmd.status().unwrap();
+
+                if status.success() {
+                    symlink_in_place(&signed_temp_path, &signed_final_path);
+                    info!("sucessfully signed zone: {} to output path: {:?}", &name, &signed_final_path);
+                } else {
+                    error!("dnssec signing failed for zone: {} with exit code: {:?}", &name, &status.code());
+                }
+                true
             } else {
-                error!("dnssec signing failed for zone: {} with exit code: {:?}", &name, &status.code());
+                debug!("not changing symlink: {:?}", &signed_temp_path);
+                false
             }
-        } else {
-            debug!("not changing symlink: {:?}", &signed_temp_path);
-        }
+        },
+        None => false  // dnssec disabled for zone
     }
-    changes_made
 }
 
 fn symlink_in_place(from: &Path, to: &Path) {
