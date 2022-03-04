@@ -37,5 +37,6 @@ pub struct Record {
   pub ttl_seconds: u32,
   #[serde(rename = "type")]
   pub record_type: String,
+  pub priority: Option<u32>,
 }
 

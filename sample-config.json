@@ -8,6 +8,13 @@
     "kronborgthomsen.dk": {
       "apex": [
         {
+          "target": "mx.example.de",
+          "ttl": "5m",
+          "ttlSeconds": 300,
+          "priority": 10,
+          "type": "MX"
+        },
+        {
           "target": "ns1.example.de",
           "ttl": "5m",
           "ttlSeconds": 300,
