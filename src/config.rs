@@ -7,7 +7,7 @@ use std::path::PathBuf;
 pub struct Config {
   #[serde(default = "default_api_tcp_listen_port")]
   pub api_tcp_listen_port: u16,
-  pub named_reload_command: Vec<String>,
+  pub named_reload_command: Option<Vec<String>>,
   pub zones: HashMap<String, Zone>,
   pub zone_file_dir: PathBuf,
 }
@@ -16,7 +16,7 @@ fn default_api_tcp_listen_port() -> u16 {
   8053
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Zone {
   pub apex: Vec<Record>,
   #[serde(rename = "dnssecKeyDirectory")]
@@ -30,7 +30,7 @@ pub struct Zone {
   pub ttl: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Record {
   pub target: String,
   #[serde(rename = "ttlSeconds")]
@@ -40,3 +40,11 @@ pub struct Record {
   pub priority: Option<u32>,
 }
 
+impl Record {
+  pub fn trailing_dot(&self) -> bool {
+    match self.record_type.as_str() {
+      "A" | "AAAA" | "TXT" => false,
+      _ => true,
+    }
+  }
+}

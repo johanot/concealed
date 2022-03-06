@@ -1,11 +1,11 @@
 {{ name }}. 3600 IN SOA {{ zone.server }}. hostmaster.{{ name }}. {{ serial }} {{ zone.refresh }} {{ zone.retry }} {{ zone.expire }} {{ zone.ttl }}
 
 {% for r in zone.apex %}
-{{ name }}. {{ r.ttl_seconds }} IN {{ r.record_type }}{% match r.priority %}{% when Some with (val) %} {{ val }}{% when None %}{% endmatch %} {{ r.target }}{% if r.record_type != "A" && r.record_type != "AAAA" %}.{% else %}{% endif %}
+{{ name }}. {{ r.ttl_seconds }} IN {{ r.record_type }}{% match r.priority %}{% when Some with (val) %} {{ val }}{% when None %}{% endmatch %} {{ r.target }}{% if r.trailing_dot() %}.{% else %}{% endif %}
 {% endfor %}
 
 {% for (n, rr) in zone.records %}
   {% for r in rr %}
-{{ n }}.{{ name }}. {{ r.ttl_seconds }} IN {{ r.record_type }}{% match r.priority %}{% when Some with (val) %} {{ val }}{% when None %}{% endmatch %} {{ r.target }}{% if r.record_type != "A" && r.record_type != "AAAA" %}.{% else %}{% endif %}
+{{ n }}.{{ name }}. {{ r.ttl_seconds }} IN {{ r.record_type }}{% match r.priority %}{% when Some with (val) %} {{ val }}{% when None %}{% endmatch %} {{ r.target }}{% if r.trailing_dot() %}.{% else %}{% endif %}
   {% endfor %}
 {% endfor %}

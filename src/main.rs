@@ -1,5 +1,5 @@
 use log::{debug, error, info, warn};
-use crate::config::{Config, Zone};
+use crate::config::{Config, Zone, Record};
 
 use std::io::BufReader;
 use std::fs::File;
@@ -21,7 +21,16 @@ use chrono::NaiveDateTime;
 use sha2::{Sha256, Digest};
 use regex::Regex;
 
+use lazy_static::lazy_static;
+use std::collections::HashMap;
+use std::sync::RwLock;
+
 mod config;
+
+lazy_static! {
+    static ref ZONES: RwLock<HashMap<String, Zone>> =
+        RwLock::new(HashMap::new());
+}
 
 #[tokio::main]
 async fn main() {
@@ -54,6 +63,13 @@ async fn main() {
         std::process::exit(0);
     }
 
+    {
+        let mut guard = ZONES.write().unwrap();
+        for (n, z) in &config.zones {
+            guard.insert(n.clone(), z.to_owned());
+        }
+    }
+
     tokio::join!(
         reconcile_zones(&config),
         spawn_api_server(&config),
@@ -63,26 +79,36 @@ async fn main() {
 async fn reconcile_zones(config: &Config) {
     let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(5));
 
-    let (reload_cmd_str, args) = config.named_reload_command.split_first().unwrap();
+    let mut reload_cmd = config.named_reload_command
+        .as_ref()
+        .map(|c| {
+            let (reload_cmd_str, args) = c.split_first().unwrap();
+            let mut cmd = Command::new(reload_cmd_str);
+            cmd.stderr(Stdio::inherit())
+                .stdout(Stdio::inherit())
+                .args(args);
 
-    let mut reload_cmd = Command::new(reload_cmd_str);
-    reload_cmd.stderr(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .args(args); 
+            cmd
+        });
 
     loop {
-        std::fs::create_dir_all(&config.zone_file_dir).unwrap();
+        std::fs::create_dir_all(&config.zone_file_dir.canonicalize().unwrap()).unwrap();
         let now = Utc::now();
         let serial = now.timestamp() as u32;
         let mut reload_needed = false;
-        for (n, z) in &config.zones {
-            let (content, digest) = render_zonefile(&n, &z, serial);
-            let changed = maybe_persist(&config, &n, &content, &digest);
-            let signed = maybe_sign(&config, &n, &z, &digest, changed);
-            reload_needed = reload_needed || changed || signed;
+
+        {
+            let guard = ZONES.read().unwrap();
+            for (n, z) in guard.iter() {
+                let (content, digest) = render_zonefile(&n, &z, serial);
+                let changed = maybe_persist(&config, &n, &content, &digest);
+                let signed = maybe_sign(&config, &n, &z, &digest, changed);
+                reload_needed = reload_needed || changed || signed;
+            }
         }
 
-        if reload_needed {
+        if reload_cmd.is_some() && reload_needed {
+            let reload_cmd = reload_cmd.as_mut().unwrap();
             info!("executing reload command: {:?}", &reload_cmd);
             let status = reload_cmd.status().unwrap();
             if !status.success() {
@@ -98,8 +124,39 @@ async fn spawn_api_server(config: &Config) {
         .and(warp::path!(String / "TXT" / String))
         .and(warp::body::content_length_limit(1024 * 16))
         .and(warp::body::bytes())
-        .map(|zone: String, _name: String, _bytes: bytes::Bytes| {
-            format!("Not authority for zone: {}", zone) //TODO
+        .map(|zone: String, name: String, bytes: bytes::Bytes| {
+            if ZONES.read().unwrap().contains_key(&zone) {
+                let mut guard = ZONES.write().unwrap();
+                let records = &mut guard
+                    .get_mut(&zone)
+                    .unwrap()
+                    .records;
+
+                let new_record = Record{
+                    target: String::from_utf8(bytes.to_vec()).unwrap(),
+                    ttl_seconds: 300,
+                    record_type: "TXT".to_string(),
+                    priority: None,
+                };
+
+                //always override whatever records that might exist
+                records.insert(name.clone(), vec!(new_record));
+
+            /*
+                if !records.contains_key(&name) {
+                    records.insert(name.clone(), vec!());
+                }
+
+                records.get_mut(&name).map(|list| {
+                    list.push(new_record);
+                });
+            */
+
+                "".to_string()
+
+            } else {
+                format!("Not authority for zone: {}", zone)
+            }
         });
 
     warp::serve(hello)
@@ -137,8 +194,9 @@ fn render_zonefile(name: &str, zone: &Zone, serial: u32) -> (String, String) {
 }
 
 fn maybe_persist(config: &Config, name: &str, content: &str, digest: &str) -> bool {
-    let final_path = config.zone_file_dir.join(format!("{}.zone", &name));
-    let temp_path = config.zone_file_dir.join(format!("{}.zone", &digest));
+    let zone_file_dir = config.zone_file_dir.canonicalize().unwrap();
+    let final_path = zone_file_dir.join(format!("{}.zone", &name));
+    let temp_path = zone_file_dir.join(format!("{}.zone", &digest));
 
     let link_target = std::fs::read_link(&final_path).unwrap_or(PathBuf::new());
 
@@ -157,9 +215,11 @@ fn maybe_persist(config: &Config, name: &str, content: &str, digest: &str) -> bo
 fn maybe_sign(config: &Config, name: &str, zone: &Zone, digest: &str, upstream_changes: bool) -> bool {
     match &zone.dnssec_key_directory {
         Some(key_dir) => {
-            let final_path = config.zone_file_dir.join(format!("{}.zone", &digest));
-            let signed_temp_path = config.zone_file_dir.join(format!("{}.signed", &digest));
-            let signed_final_path = config.zone_file_dir.join(format!("{}.signed", &name));
+            let zone_file_dir = config.zone_file_dir.canonicalize().unwrap();
+
+            let final_path = zone_file_dir.join(format!("{}.zone", &digest));
+            let signed_temp_path = zone_file_dir.join(format!("{}.signed", &digest));
+            let signed_final_path = zone_file_dir.join(format!("{}.signed", &name));
             let signed_link_target = std::fs::read_link(&signed_final_path).unwrap_or(PathBuf::new());
 
             if upstream_changes ||
