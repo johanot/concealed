@@ -126,9 +126,14 @@ async fn spawn_api_server(config: &Config) {
         .and(warp::body::bytes())
         .map(|zone: String, name: String, bytes: bytes::Bytes| {
             if ZONES.read().unwrap().contains_key(&zone) {
+                let name = name.trim_end_matches('.');
+                let zone = zone.trim_end_matches('.');
+                let name = name.strip_suffix(zone).unwrap_or(name);
+                let name = name.trim_end_matches('.');
+
                 let mut guard = ZONES.write().unwrap();
                 let records = &mut guard
-                    .get_mut(&zone)
+                    .get_mut(zone)
                     .unwrap()
                     .records;
 
@@ -140,7 +145,7 @@ async fn spawn_api_server(config: &Config) {
                 };
 
                 //always override whatever records that might exist
-                records.insert(name.clone(), vec!(new_record));
+                records.insert(name.to_owned(), vec!(new_record));
 
             /*
                 if !records.contains_key(&name) {

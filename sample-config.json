@@ -1,9 +1,5 @@
 {
-  "named_reload_command": [
-    "sudo",
-    "/run/current-system/sw/bin/reload-bind"
-  ],
-  "zone_file_dir": "/zones",
+  "zone_file_dir": "./zones",
   "zones": {
     "kronborgthomsen.dk": {
       "apex": [
@@ -90,7 +86,6 @@
           "type": "AAAA"
         }
       ],
-      "dnssecKeyDirectory": "/keys/example.dk",
       "expire": "1w",
       "extraNotifys": [
         "8.8.4.4"
