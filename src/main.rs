@@ -121,12 +121,19 @@ async fn reconcile_zones(config: &Config) {
 
 async fn spawn_api_server(config: &Config) {
     let hello = warp::put()
-        .and(warp::path!(String / "TXT" / String))
+        .and(warp::path!("TXT" / String))
         .and(warp::body::content_length_limit(1024 * 16))
         .and(warp::body::bytes())
-        .map(|zone: String, name: String, bytes: bytes::Bytes| {
-            if ZONES.read().unwrap().contains_key(&zone) {
-                let name = name.trim_end_matches('.');
+        .map(|name: String, bytes: bytes::Bytes| {
+            let name = name.trim_end_matches('.');
+            let zm = ZONES.read().unwrap().iter().find(|(n, _)| {
+                name.ends_with(n.as_str())
+            })
+            .map(|(n, _)| {
+                n.to_owned()
+            });
+
+            if let Some(zone) = zm {
                 let zone = zone.trim_end_matches('.');
                 let name = name.strip_suffix(zone).unwrap_or(name);
                 let name = name.trim_end_matches('.');
@@ -160,7 +167,7 @@ async fn spawn_api_server(config: &Config) {
                 "".to_string()
 
             } else {
-                format!("Not authority for zone: {}", zone)
+                "Not authority for zone".to_string()
             }
         });
 
