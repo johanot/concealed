@@ -1,5 +1,6 @@
 use log::{debug, error, info, warn};
 use crate::config::{Config, Zone, Record};
+use crate::keyparser::DNSSecKey;
 
 use std::io::BufReader;
 use std::fs::File;
@@ -24,8 +25,10 @@ use regex::Regex;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::sync::RwLock;
+use chrono::Duration;
 
 mod config;
+mod keyparser;
 
 lazy_static! {
     static ref ZONES: RwLock<HashMap<String, Zone>> =
@@ -100,9 +103,10 @@ async fn reconcile_zones(config: &Config) {
         {
             let guard = ZONES.read().unwrap();
             for (n, z) in guard.iter() {
+                let (active_keys, prepub_keys): (Vec<DNSSecKey>, Vec<DNSSecKey>) = check_dnssec_key_validity(&n, &z).await;
                 let (content, digest) = render_zonefile(&n, &z, serial);
                 let changed = maybe_persist(&config, &n, &content, &digest);
-                let signed = maybe_sign(&config, &n, &z, &digest, changed);
+                let signed = maybe_sign(&config, &n, &z, &digest, changed, active_keys, prepub_keys);
                 reload_needed = reload_needed || changed || signed;
             }
         }
@@ -116,6 +120,71 @@ async fn reconcile_zones(config: &Config) {
             }
         }
         interval.tick().await;
+    }
+}
+
+async fn check_dnssec_key_validity(name: &str, zone: &Zone) -> (Vec<DNSSecKey>,Vec<DNSSecKey>) {
+    if let Some(dir) = &zone.dnssec_key_directory {
+        let keys = match keyparser::parse_directory(&dir) {
+            Ok(keys) => keys,
+            Err(e) => {
+                error!("failed to parse key directory: {:?}", &e);
+                vec!()
+            },
+        };
+        let now = Utc::now();
+        let newest_renewal_candidate =
+            keys
+                .iter()
+                .filter(|k| {
+                    k.key_type == keyparser::DNSSecKeyType::ZSK  // Only auto-renew ZSK's for now
+                })
+                .max_by(|x, y| {
+                    if x.inactive.is_some() && y.inactive.is_some() {
+                        x.inactive.unwrap().cmp(&y.inactive.unwrap())
+                    } else {
+                        std::cmp::Ordering::Greater
+                    }
+                });
+
+        match newest_renewal_candidate {
+            Some(k) => {
+                debug!("considering dnssec key: {}", &k.name);
+                if k.inactive.is_some() && now.checked_add_signed(Duration::days(45)).unwrap() > k.inactive.unwrap() {
+                    info!("renewing dnssec-key for zone: {}, key-name: {}", &name, &k.name);
+                    let key_parts = keyparser::successor_dnssec_key_via_temp(&k).unwrap();
+                    for (k, v) in &key_parts {
+                        let final_path = dir.join(&k);
+                        let mut file = File::create(&final_path).unwrap();
+                        file.write_all(&v.as_bytes()).unwrap();
+                    }
+                }
+            }
+            None => {},
+        }
+
+        let active_keys = keys
+            .iter()
+            .filter(|k| {
+                k.key_type == keyparser::DNSSecKeyType::ZSK &&
+                k.activate.map(|a| a < now).unwrap_or(false) &&
+                k.inactive.map(|i| i > now).unwrap_or(true)
+            })
+            .map(|k| k.to_owned())
+            .collect();
+
+        let prepub_keys = keys
+            .iter()
+            .filter(|k| {
+                k.publish.map(|p| p < now).unwrap_or(false) &&
+                k.inactive.map(|i| i > now).unwrap_or(true)
+            })
+            .map(|k| k.to_owned())
+            .collect();
+
+        (active_keys, prepub_keys)
+    } else {
+        (vec!(), vec!())
     }
 }
 
@@ -224,7 +293,7 @@ fn maybe_persist(config: &Config, name: &str, content: &str, digest: &str) -> bo
     }
 }
 
-fn maybe_sign(config: &Config, name: &str, zone: &Zone, digest: &str, upstream_changes: bool) -> bool {
+fn maybe_sign(config: &Config, name: &str, zone: &Zone, digest: &str, upstream_changes: bool, active_keys: Vec<DNSSecKey>, prepub_keys: Vec<DNSSecKey>) -> bool {
     match &zone.dnssec_key_directory {
         Some(key_dir) => {
             let zone_file_dir = config.zone_file_dir.canonicalize().unwrap();
@@ -237,7 +306,7 @@ fn maybe_sign(config: &Config, name: &str, zone: &Zone, digest: &str, upstream_c
             if upstream_changes ||
                 !signed_link_target.exists() ||
                 signed_link_target != signed_temp_path ||
-                find_nearest_rrsig_expiry(&signed_link_target) < 60*60*24*7 // 7 days
+                find_nearest_rrsig_expiry(&signed_link_target, active_keys, prepub_keys) < 60*60*24*7 // 7 days
             {
                 let mut cmd = Command::new("dnssec-signzone");
 
@@ -291,9 +360,20 @@ fn symlink_in_place(from: &Path, to: &Path) {
     std::fs::rename(&temp_path, &to).unwrap();
 }
 
-fn find_nearest_rrsig_expiry(path: &Path) -> i64 {
+fn find_nearest_rrsig_expiry(path: &Path, active_keys_input: Vec<DNSSecKey>, prepub_keys_input: Vec<DNSSecKey>) -> i64 {
+
+    let mut active_keys = HashMap::new();
+    for k in active_keys_input {
+        active_keys.insert(k.key_id.clone(), k.clone());
+    }
+    let mut prepub_keys = HashMap::new();
+    for k in prepub_keys_input {
+        prepub_keys.insert(k.key_id.clone(), k.clone());
+    }
+
     let re_pre = Regex::new(r"^[^\s]*\s+[0-9]+\s+RRSIG.+").unwrap();
-    let re_now = Regex::new(r"^\s+([0-9]{14}) [0-9]{14}").unwrap();
+    let re_now = Regex::new(r"^\s+([0-9]{14}) [0-9]{14} ([0-9]{1,5})").unwrap();
+    let re_prepub = Regex::new(r"key id = ([0-9]{1,5})").unwrap();
     let utc = Utc::now();
     let now = utc.naive_utc();
 
@@ -305,9 +385,19 @@ fn find_nearest_rrsig_expiry(path: &Path) -> i64 {
     for line in lines {
         line_number = line_number+1;
         let current_expiry = if let Ok(l) = line {
+            if let Some(m) = re_prepub.captures(&l) {
+                if let Some(key_id) = m.get(1) {
+                    debug!("removing key-id (prepub): '{}'", &key_id.as_str());
+                    prepub_keys.remove(key_id.as_str());
+                }
+            }
             if rrsig_upcoming {
                 rrsig_upcoming = false;
                 if let Some(m) = re_now.captures(&l) {
+                    if let Some(key_id) = m.get(2) {
+                        debug!("removing key-id (active): '{}'", &key_id.as_str());
+                        active_keys.remove(key_id.as_str());
+                    }
                     if let Some(expiry_string) = m.get(1) {
                         debug!("trying to date-parse: '{}'", expiry_string.as_str());
                         let parsed = NaiveDateTime::parse_from_str(expiry_string.as_str(), "%Y%m%d%H%M%S").unwrap();
@@ -332,5 +422,15 @@ fn find_nearest_rrsig_expiry(path: &Path) -> i64 {
             soonest_expiry = current_expiry;
         }
     }
-    soonest_expiry
+    if active_keys.len() > 0 {
+        let key_ids: Vec<String> = active_keys.values().map(|k| k.key_id.clone()).collect();
+        info!("forcing expiry of signed zone now, since there is ACTIVE keys which doesn't have RRSIG records for keyid's: {:?}", &key_ids);
+        0
+    } else if prepub_keys.len() > 0 {
+        let key_ids: Vec<String> = prepub_keys.values().map(|k| k.key_id.clone()).collect();
+        info!("forcing expiry of signed zone now, since there is PREPUB keys which doesn't have DNSKEY records for keyid's: {:?}", &key_ids);
+        0
+    } else {
+        soonest_expiry
+    }
 }

@@ -589,7 +589,7 @@ rec {
         ];
         src = lib.cleanSourceWith { filter = sourceFilter;  src = ./.; };
         authors = [
-          "Johan Thomsen <jot@colabo.dk>"
+          "Johan Thomsen <johanot@users.noreply.github.com>"
         ];
         dependencies = [
           {
@@ -609,6 +609,10 @@ rec {
             packageId = "clap";
           }
           {
+            name = "dbc-rust-modules";
+            packageId = "dbc-rust-modules";
+          }
+          {
             name = "env_logger";
             packageId = "env_logger";
           }
@@ -622,7 +626,7 @@ rec {
           }
           {
             name = "rand";
-            packageId = "rand";
+            packageId = "rand 0.8.5";
           }
           {
             name = "regex";
@@ -645,9 +649,22 @@ rec {
             packageId = "sha2";
           }
           {
+            name = "strum";
+            packageId = "strum";
+            features = [ "derive" ];
+          }
+          {
+            name = "tempdir";
+            packageId = "tempdir";
+          }
+          {
             name = "tokio";
             packageId = "tokio";
             features = [ "full" ];
+          }
+          {
+            name = "walkdir";
+            packageId = "walkdir";
           }
           {
             name = "warp";
@@ -700,6 +717,61 @@ rec {
         features = {
         };
         resolvedDefaultFeatures = [ "std" ];
+      };
+      "dbc-rust-modules" = rec {
+        crateName = "dbc-rust-modules";
+        version = "0.1.0";
+        edition = "2018";
+        workspace_member = null;
+        src = pkgs.fetchgit {
+          url = "https://github.com/dbcdk/rust-modules";
+          rev = "fc8fcd2d5bc7029108418579a2702ed28189c607";
+          sha256 = "1cc6hw021jam389j45fjxmi7hd0df0aq69f2a72v64wg1d0rwhh4";
+        };
+        dependencies = [
+          {
+            name = "chrono";
+            packageId = "chrono";
+            optional = true;
+          }
+          {
+            name = "erased-serde";
+            packageId = "erased-serde";
+            optional = true;
+          }
+          {
+            name = "once_cell";
+            packageId = "once_cell";
+            optional = true;
+          }
+          {
+            name = "serde";
+            packageId = "serde";
+            optional = true;
+          }
+          {
+            name = "serde_derive";
+            packageId = "serde_derive";
+            optional = true;
+          }
+          {
+            name = "serde_json";
+            packageId = "serde_json";
+            optional = true;
+          }
+          {
+            name = "uuid";
+            packageId = "uuid";
+            optional = true;
+            features = [ "v4" ];
+          }
+        ];
+        features = {
+          "default" = [ "exec" "log" ];
+          "exec" = [ "serde" "serde_derive" "serde_json" ];
+          "log" = [ "chrono" "erased-serde" "once_cell" "serde" "serde_derive" "serde_json" "uuid" ];
+        };
+        resolvedDefaultFeatures = [ "chrono" "default" "erased-serde" "exec" "log" "once_cell" "serde" "serde_derive" "serde_json" "uuid" ];
       };
       "digest 0.10.3" = rec {
         crateName = "digest";
@@ -792,6 +864,28 @@ rec {
         };
         resolvedDefaultFeatures = [ "atty" "default" "humantime" "regex" "termcolor" ];
       };
+      "erased-serde" = rec {
+        crateName = "erased-serde";
+        version = "0.3.18";
+        edition = "2018";
+        sha256 = "12mxh2iaz20knyf038v66nm63jdw6zbyry92r9sq04dbw5c7012n";
+        authors = [
+          "David Tolnay <dtolnay@gmail.com>"
+        ];
+        dependencies = [
+          {
+            name = "serde";
+            packageId = "serde";
+            usesDefaultFeatures = false;
+          }
+        ];
+        features = {
+          "alloc" = [ "serde/alloc" ];
+          "default" = [ "std" ];
+          "std" = [ "serde/std" ];
+        };
+        resolvedDefaultFeatures = [ "default" "std" ];
+      };
       "fastrand" = rec {
         crateName = "fastrand";
         version = "1.7.0";
@@ -848,6 +942,16 @@ rec {
             name = "percent-encoding";
             packageId = "percent-encoding";
           }
+        ];
+
+      };
+      "fuchsia-cprng" = rec {
+        crateName = "fuchsia-cprng";
+        version = "0.1.1";
+        edition = "2018";
+        sha256 = "1fnkqrbz7ixxzsb04bsz9p0zzazanma8znfdqjvh39n14vapfvx0";
+        authors = [
+          "Erick Tryzelaar <etryzelaar@google.com>"
         ];
 
       };
@@ -1001,9 +1105,9 @@ rec {
       };
       "getrandom" = rec {
         crateName = "getrandom";
-        version = "0.2.4";
+        version = "0.2.5";
         edition = "2018";
-        sha256 = "0k0bdr1dyf4n9fvnkx4fmwxhv4hgnyf55gj86v4m69fln743g3a1";
+        sha256 = "0xqfjd779yklms48j222jknmw2a2lx6fhynb3zx18w8r00wxk76k";
         authors = [
           "The Rand Project Developers"
         ];
@@ -1175,6 +1279,22 @@ rec {
           {
             name = "http";
             packageId = "http";
+          }
+        ];
+
+      };
+      "heck" = rec {
+        crateName = "heck";
+        version = "0.3.3";
+        edition = "2018";
+        sha256 = "0b0kkr790p66lvzn9nsmfjvydrbmh9z5gb664jchwgw64vxiwqkd";
+        authors = [
+          "Without Boats <woboats@gmail.com>"
+        ];
+        dependencies = [
+          {
+            name = "unicode-segmentation";
+            packageId = "unicode-segmentation";
           }
         ];
 
@@ -1535,9 +1655,9 @@ rec {
       };
       "libc" = rec {
         crateName = "libc";
-        version = "0.2.117";
+        version = "0.2.119";
         edition = "2015";
-        sha256 = "0v52a7r5kmgc97rjf1sm3p3gkw3djzrnld4sli65nnxnz7h74kg7";
+        sha256 = "195a2q4lfhg7dc72vmchma3mzdcxpkiz6xpak3hchmrlpdjy3whv";
         authors = [
           "The Rust Project Developers"
         ];
@@ -1655,9 +1775,9 @@ rec {
       };
       "mio" = rec {
         crateName = "mio";
-        version = "0.7.14";
+        version = "0.8.0";
         edition = "2018";
-        sha256 = "1k05cah6zdww6i2qc7gaxbbja4ppyjycipl2y0lhiiwpzq2b8rw0";
+        sha256 = "1cmgipv6k536xf0a6qd359wnpxg0pfrpkr9bhy8zqh8bza2jy9xs";
         authors = [
           "Carl Lerche <me@carllerche.com>"
           "Thomas de Zeeuw <thomasdezeeuw@gmail.com>"
@@ -1687,18 +1807,13 @@ rec {
             name = "winapi";
             packageId = "winapi";
             target = { target, features }: (target."windows" or false);
-            features = [ "winsock2" "mswsock" "mstcpip" ];
+            features = [ "winsock2" "mswsock" ];
           }
         ];
         features = {
           "os-ext" = [ "os-poll" ];
-          "os-util" = [ "os-ext" ];
-          "pipe" = [ "os-ext" ];
-          "tcp" = [ "net" ];
-          "udp" = [ "net" ];
-          "uds" = [ "net" ];
         };
-        resolvedDefaultFeatures = [ "default" "net" "os-ext" "os-poll" "os-util" "tcp" "udp" "uds" ];
+        resolvedDefaultFeatures = [ "default" "net" "os-ext" "os-poll" ];
       };
       "miow" = rec {
         crateName = "miow";
@@ -1757,7 +1872,7 @@ rec {
           }
           {
             name = "rand";
-            packageId = "rand";
+            packageId = "rand 0.8.5";
           }
           {
             name = "safemem";
@@ -1829,9 +1944,9 @@ rec {
       };
       "ntapi" = rec {
         crateName = "ntapi";
-        version = "0.3.6";
+        version = "0.3.7";
         edition = "2018";
-        sha256 = "0i5daj9sr8wyi5jkpwpybln2jqpn59z0mqfc0dpdidipwh1bjsrz";
+        sha256 = "03wqq2x5jv5xrsirbxmm460gcfmpakjpq8yqmc5lzfrgznkp91y2";
         authors = [
           "MSxDOS <melcodos@gmail.com>"
         ];
@@ -1845,6 +1960,7 @@ rec {
         features = {
           "default" = [ "user" ];
           "impl-default" = [ "winapi/impl-default" ];
+          "nightly" = [ "beta" ];
         };
         resolvedDefaultFeatures = [ "default" "user" ];
       };
@@ -1943,17 +2059,13 @@ rec {
       };
       "parking_lot" = rec {
         crateName = "parking_lot";
-        version = "0.11.2";
+        version = "0.12.0";
         edition = "2018";
-        sha256 = "16gzf41bxmm10x82bla8d6wfppy9ym3fxsmdjyvn61m66s0bf5vx";
+        sha256 = "0n7gp0cnfghglc370cxhawwfijvhj3wrjh8gdi8c06m6jcjfrxc7";
         authors = [
           "Amanieu d'Antras <amanieu@gmail.com>"
         ];
         dependencies = [
-          {
-            name = "instant";
-            packageId = "instant";
-          }
           {
             name = "lock_api";
             packageId = "lock_api";
@@ -1969,16 +2081,14 @@ rec {
           "nightly" = [ "parking_lot_core/nightly" "lock_api/nightly" ];
           "owning_ref" = [ "lock_api/owning_ref" ];
           "serde" = [ "lock_api/serde" ];
-          "stdweb" = [ "instant/stdweb" ];
-          "wasm-bindgen" = [ "instant/wasm-bindgen" ];
         };
         resolvedDefaultFeatures = [ "default" ];
       };
       "parking_lot_core" = rec {
         crateName = "parking_lot_core";
-        version = "0.8.5";
+        version = "0.9.1";
         edition = "2018";
-        sha256 = "05ij4zxsylx99srbq8qd1k2wiwaq8krkf9y4cqkhvb5wjca8wvnp";
+        sha256 = "0m49xlpxyw0c65c3011zvgzn2slpviw494816d2a4g8lqh61w518";
         authors = [
           "Amanieu d'Antras <amanieu@gmail.com>"
         ];
@@ -1986,10 +2096,6 @@ rec {
           {
             name = "cfg-if";
             packageId = "cfg-if";
-          }
-          {
-            name = "instant";
-            packageId = "instant";
           }
           {
             name = "libc";
@@ -2006,10 +2112,10 @@ rec {
             packageId = "smallvec";
           }
           {
-            name = "winapi";
-            packageId = "winapi";
+            name = "windows-sys";
+            packageId = "windows-sys";
             target = { target, features }: (target."windows" or false);
-            features = [ "winnt" "ntstatus" "minwindef" "winerror" "winbase" "errhandlingapi" "handleapi" ];
+            features = [ "Win32_Foundation" "Win32_System_LibraryLoader" "Win32_System_SystemServices" "Win32_System_WindowsProgramming" ];
           }
         ];
         features = {
@@ -2156,11 +2262,56 @@ rec {
         ];
 
       };
-      "rand" = rec {
+      "rand 0.4.6" = rec {
         crateName = "rand";
-        version = "0.8.4";
+        version = "0.4.6";
+        edition = "2015";
+        sha256 = "14qjfv3gggzhnma20k0sc1jf8y6pplsaq7n1j9ls5c8kf2wl0a2m";
+        authors = [
+          "The Rust Project Developers"
+        ];
+        dependencies = [
+          {
+            name = "fuchsia-cprng";
+            packageId = "fuchsia-cprng";
+            target = { target, features }: (target."os" == "fuchsia");
+          }
+          {
+            name = "libc";
+            packageId = "libc";
+            optional = true;
+            target = { target, features }: (target."unix" or false);
+          }
+          {
+            name = "rand_core";
+            packageId = "rand_core 0.3.1";
+            usesDefaultFeatures = false;
+            target = { target, features }: (target."env" == "sgx");
+          }
+          {
+            name = "rdrand";
+            packageId = "rdrand";
+            target = { target, features }: (target."env" == "sgx");
+          }
+          {
+            name = "winapi";
+            packageId = "winapi";
+            target = { target, features }: (target."windows" or false);
+            features = [ "minwindef" "ntsecapi" "profileapi" "winnt" ];
+          }
+        ];
+        features = {
+          "default" = [ "std" ];
+          "nightly" = [ "i128_support" ];
+          "std" = [ "libc" ];
+        };
+        resolvedDefaultFeatures = [ "default" "libc" "std" ];
+      };
+      "rand 0.8.5" = rec {
+        crateName = "rand";
+        version = "0.8.5";
         edition = "2018";
-        sha256 = "1n5wska2fbfj4dsfz8mc0pd0dgjlrb6c9anpk5mwym345rip6x9f";
+        sha256 = "013l6931nn7gkc23jz5mm3qdhf93jjf0fg64nz2lp4i51qd8vbrl";
         authors = [
           "The Rand Project Developers"
           "The Rust Project Developers"
@@ -2178,23 +2329,10 @@ rec {
             packageId = "rand_chacha";
             optional = true;
             usesDefaultFeatures = false;
-            target = { target, features }: (!(target."os" == "emscripten"));
           }
           {
             name = "rand_core";
-            packageId = "rand_core";
-          }
-          {
-            name = "rand_hc";
-            packageId = "rand_hc";
-            optional = true;
-            target = { target, features }: (target."os" == "emscripten");
-          }
-        ];
-        devDependencies = [
-          {
-            name = "rand_hc";
-            packageId = "rand_hc";
+            packageId = "rand_core 0.6.3";
           }
         ];
         features = {
@@ -2204,9 +2342,9 @@ rec {
           "serde1" = [ "serde" "rand_core/serde1" ];
           "simd_support" = [ "packed_simd" ];
           "std" = [ "rand_core/std" "rand_chacha/std" "alloc" "getrandom" "libc" ];
-          "std_rng" = [ "rand_chacha" "rand_hc" ];
+          "std_rng" = [ "rand_chacha" ];
         };
-        resolvedDefaultFeatures = [ "alloc" "default" "getrandom" "libc" "rand_chacha" "rand_hc" "std" "std_rng" ];
+        resolvedDefaultFeatures = [ "alloc" "default" "getrandom" "libc" "rand_chacha" "std" "std_rng" ];
       };
       "rand_chacha" = rec {
         crateName = "rand_chacha";
@@ -2227,7 +2365,7 @@ rec {
           }
           {
             name = "rand_core";
-            packageId = "rand_core";
+            packageId = "rand_core 0.6.3";
           }
         ];
         features = {
@@ -2237,7 +2375,43 @@ rec {
         };
         resolvedDefaultFeatures = [ "std" ];
       };
-      "rand_core" = rec {
+      "rand_core 0.3.1" = rec {
+        crateName = "rand_core";
+        version = "0.3.1";
+        edition = "2015";
+        sha256 = "0jzdgszfa4bliigiy4hi66k7fs3gfwi2qxn8vik84ph77fwdwvvs";
+        authors = [
+          "The Rand Project Developers"
+          "The Rust Project Developers"
+        ];
+        dependencies = [
+          {
+            name = "rand_core";
+            packageId = "rand_core 0.4.2";
+          }
+        ];
+        features = {
+          "alloc" = [ "rand_core/alloc" ];
+          "default" = [ "std" ];
+          "serde1" = [ "rand_core/serde1" ];
+          "std" = [ "rand_core/std" ];
+        };
+      };
+      "rand_core 0.4.2" = rec {
+        crateName = "rand_core";
+        version = "0.4.2";
+        edition = "2015";
+        sha256 = "1p09ynysrq1vcdlmcqnapq4qakl2yd1ng3kxh3qscpx09k2a6cww";
+        authors = [
+          "The Rand Project Developers"
+          "The Rust Project Developers"
+        ];
+        features = {
+          "serde1" = [ "serde" "serde_derive" ];
+          "std" = [ "alloc" ];
+        };
+      };
+      "rand_core 0.6.3" = rec {
         crateName = "rand_core";
         version = "0.6.3";
         edition = "2018";
@@ -2259,27 +2433,31 @@ rec {
         };
         resolvedDefaultFeatures = [ "alloc" "getrandom" "std" ];
       };
-      "rand_hc" = rec {
-        crateName = "rand_hc";
-        version = "0.3.1";
-        edition = "2018";
-        sha256 = "1rwpykyvhkxs4jvqdja3mzp9dqaqamzn113cxaigs9z2dmcry7nm";
+      "rdrand" = rec {
+        crateName = "rdrand";
+        version = "0.4.0";
+        edition = "2015";
+        sha256 = "1cjq0kwx1bk7jx3kzyciiish5gqsj7620dm43dc52sr8fzmm9037";
         authors = [
-          "The Rand Project Developers"
+          "Simonas Kazlauskas <rdrand@kazlauskas.me>"
         ];
         dependencies = [
           {
             name = "rand_core";
-            packageId = "rand_core";
+            packageId = "rand_core 0.3.1";
+            usesDefaultFeatures = false;
           }
         ];
-
+        features = {
+          "default" = [ "std" ];
+        };
+        resolvedDefaultFeatures = [ "default" "std" ];
       };
       "redox_syscall" = rec {
         crateName = "redox_syscall";
-        version = "0.2.10";
+        version = "0.2.11";
         edition = "2018";
-        sha256 = "1zq36bhw4c6xig340ja1jmr36iy0d3djp8smsabxx71676bg70w3";
+        sha256 = "0g2gcdqp462827ywwk51jx7sgy706wbz86vvfkq484jma80zx043";
         libName = "syscall";
         authors = [
           "Jeremy Soller <jackpot51@gmail.com>"
@@ -2390,6 +2568,23 @@ rec {
         };
         resolvedDefaultFeatures = [ "default" "std" ];
       };
+      "same-file" = rec {
+        crateName = "same-file";
+        version = "1.0.6";
+        edition = "2018";
+        sha256 = "00h5j1w87dmhnvbv9l8bic3y7xxsnjmssvifw2ayvgx9mb1ivz4k";
+        authors = [
+          "Andrew Gallant <jamslam@gmail.com>"
+        ];
+        dependencies = [
+          {
+            name = "winapi-util";
+            packageId = "winapi-util";
+            target = { target, features }: (target."windows" or false);
+          }
+        ];
+
+      };
       "scoped-tls" = rec {
         crateName = "scoped-tls";
         version = "1.0.0";
@@ -2470,9 +2665,9 @@ rec {
       };
       "serde_json" = rec {
         crateName = "serde_json";
-        version = "1.0.78";
+        version = "1.0.79";
         edition = "2018";
-        sha256 = "11c0fm7wb2wydlxmq9ziqfjwxl9j1cl0jxq16az49z8fryj1ng6j";
+        sha256 = "158xd1swdvw6y59bx4avb8vdpj727n54r77xw5f7c15kqfjrz3cf";
         authors = [
           "Erick Tryzelaar <erick.tryzelaar@gmail.com>"
           "David Tolnay <dtolnay@gmail.com>"
@@ -2717,6 +2912,7 @@ rec {
         ];
         features = {
         };
+        resolvedDefaultFeatures = [ "all" ];
       };
       "static_assertions" = rec {
         crateName = "static_assertions";
@@ -2736,6 +2932,62 @@ rec {
         sha256 = "0sjsm7hrvjdifz661pjxq5w4hf190hx53fra8dfvamacvff139cf";
         authors = [
           "Danny Guo <dannyguo91@gmail.com>"
+        ];
+
+      };
+      "strum" = rec {
+        crateName = "strum";
+        version = "0.21.0";
+        edition = "2018";
+        sha256 = "1qnd2by1zrwgx7li0hmwy7jbzjwz1ky697qjg85nga8zzny6py5a";
+        authors = [
+          "Peter Glotfelty <peter.glotfelty@microsoft.com>"
+        ];
+        dependencies = [
+          {
+            name = "strum_macros";
+            packageId = "strum_macros";
+            optional = true;
+          }
+        ];
+        devDependencies = [
+          {
+            name = "strum_macros";
+            packageId = "strum_macros";
+          }
+        ];
+        features = {
+          "derive" = [ "strum_macros" ];
+        };
+        resolvedDefaultFeatures = [ "derive" "strum_macros" ];
+      };
+      "strum_macros" = rec {
+        crateName = "strum_macros";
+        version = "0.21.1";
+        edition = "2018";
+        sha256 = "1v55b1in7dn07s6vxr8dajqpvxkxjbfq6qamnjgcbnq9x3pawsnh";
+        procMacro = true;
+        authors = [
+          "Peter Glotfelty <peter.glotfelty@microsoft.com>"
+        ];
+        dependencies = [
+          {
+            name = "heck";
+            packageId = "heck";
+          }
+          {
+            name = "proc-macro2";
+            packageId = "proc-macro2";
+          }
+          {
+            name = "quote";
+            packageId = "quote";
+          }
+          {
+            name = "syn";
+            packageId = "syn";
+            features = [ "parsing" "extra-traits" ];
+          }
         ];
 
       };
@@ -2770,7 +3022,7 @@ rec {
           "proc-macro" = [ "proc-macro2/proc-macro" "quote/proc-macro" ];
           "test" = [ "syn-test-suite/all-features" ];
         };
-        resolvedDefaultFeatures = [ "clone-impls" "default" "derive" "full" "parsing" "printing" "proc-macro" "quote" "visit-mut" ];
+        resolvedDefaultFeatures = [ "clone-impls" "default" "derive" "extra-traits" "full" "parsing" "printing" "proc-macro" "quote" "visit-mut" ];
       };
       "tap" = rec {
         crateName = "tap";
@@ -2780,6 +3032,26 @@ rec {
         authors = [
           "Elliott Linder <elliott.darfink@gmail.com>"
           "myrrlyn <self@myrrlyn.dev>"
+        ];
+
+      };
+      "tempdir" = rec {
+        crateName = "tempdir";
+        version = "0.3.7";
+        edition = "2015";
+        sha256 = "1n5n86zxpgd85y0mswrp5cfdisizq2rv3la906g6ipyc03xvbwhm";
+        authors = [
+          "The Rust Project Developers"
+        ];
+        dependencies = [
+          {
+            name = "rand";
+            packageId = "rand 0.4.6";
+          }
+          {
+            name = "remove_dir_all";
+            packageId = "remove_dir_all";
+          }
         ];
 
       };
@@ -2903,9 +3175,9 @@ rec {
       };
       "time" = rec {
         crateName = "time";
-        version = "0.1.44";
+        version = "0.1.43";
         edition = "2015";
-        sha256 = "0m9jwy2pcmk232r3b9r80fs12mkckfjffjha4qfaxcdq9a8ydfbd";
+        sha256 = "0f14wrgxj7ya2v4msg5mni7046bsm2angm7cn3pd3yv04gpm12na";
         authors = [
           "The Rust Project Developers"
         ];
@@ -2913,11 +3185,6 @@ rec {
           {
             name = "libc";
             packageId = "libc";
-          }
-          {
-            name = "wasi";
-            packageId = "wasi";
-            target = { target, features }: (target."os" == "wasi");
           }
           {
             name = "winapi";
@@ -2969,9 +3236,9 @@ rec {
       };
       "tokio" = rec {
         crateName = "tokio";
-        version = "1.16.1";
+        version = "1.17.0";
         edition = "2018";
-        sha256 = "02pwb89x5lixdpfpxjdmngqwq782jfx1cxy5x04x7rjxc95sc9qc";
+        sha256 = "1vm5ynzjpsqzqv15fdrk69n6y8fhwlilmqvj270ggwsnjz23mxra";
         authors = [
           "Tokio Contributors <team@tokio.rs>"
         ];
@@ -3023,6 +3290,12 @@ rec {
             target = { target, features }: (target."unix" or false);
           }
           {
+            name = "socket2";
+            packageId = "socket2";
+            optional = true;
+            features = [ "all" ];
+          }
+          {
             name = "tokio-macros";
             packageId = "tokio-macros";
             optional = true;
@@ -3041,18 +3314,23 @@ rec {
             packageId = "libc";
             target = {target, features}: (target."unix" or false);
           }
+          {
+            name = "socket2";
+            packageId = "socket2";
+            target = {target, features}: (!(target."arch" == "wasm32"));
+          }
         ];
         features = {
           "full" = [ "fs" "io-util" "io-std" "macros" "net" "parking_lot" "process" "rt" "rt-multi-thread" "signal" "sync" "time" ];
           "io-util" = [ "memchr" "bytes" ];
           "macros" = [ "tokio-macros" ];
-          "net" = [ "libc" "mio/os-poll" "mio/os-util" "mio/tcp" "mio/udp" "mio/uds" "winapi/namedpipeapi" ];
-          "process" = [ "bytes" "once_cell" "libc" "mio/os-poll" "mio/os-util" "mio/uds" "signal-hook-registry" "winapi/threadpoollegacyapiset" ];
+          "net" = [ "libc" "mio/os-poll" "mio/os-ext" "mio/net" "socket2" "winapi/namedpipeapi" ];
+          "process" = [ "bytes" "once_cell" "libc" "mio/os-poll" "mio/os-ext" "mio/net" "signal-hook-registry" "winapi/threadpoollegacyapiset" ];
           "rt-multi-thread" = [ "num_cpus" "rt" ];
-          "signal" = [ "once_cell" "libc" "mio/os-poll" "mio/uds" "mio/os-util" "signal-hook-registry" "winapi/consoleapi" ];
+          "signal" = [ "once_cell" "libc" "mio/os-poll" "mio/net" "mio/os-ext" "signal-hook-registry" "winapi/consoleapi" ];
           "test-util" = [ "rt" "sync" "time" ];
         };
-        resolvedDefaultFeatures = [ "bytes" "default" "fs" "full" "io-std" "io-util" "libc" "macros" "memchr" "mio" "net" "num_cpus" "once_cell" "parking_lot" "process" "rt" "rt-multi-thread" "signal" "signal-hook-registry" "sync" "time" "tokio-macros" "winapi" ];
+        resolvedDefaultFeatures = [ "bytes" "default" "fs" "full" "io-std" "io-util" "libc" "macros" "memchr" "mio" "net" "num_cpus" "once_cell" "parking_lot" "process" "rt" "rt-multi-thread" "signal" "signal-hook-registry" "socket2" "sync" "time" "tokio-macros" "winapi" ];
       };
       "tokio-macros" = rec {
         crateName = "tokio-macros";
@@ -3367,7 +3645,7 @@ rec {
           }
           {
             name = "rand";
-            packageId = "rand";
+            packageId = "rand 0.8.5";
           }
           {
             name = "sha-1";
@@ -3389,7 +3667,7 @@ rec {
         devDependencies = [
           {
             name = "rand";
-            packageId = "rand";
+            packageId = "rand 0.8.5";
           }
         ];
         features = {
@@ -3490,6 +3768,18 @@ rec {
         };
         resolvedDefaultFeatures = [ "default" "std" ];
       };
+      "unicode-segmentation" = rec {
+        crateName = "unicode-segmentation";
+        version = "1.9.0";
+        edition = "2018";
+        sha256 = "16gxxda9aya0arcqs9aa9lb31b3i54i34dmyqi6j5xkpszsj123y";
+        authors = [
+          "kwantam <kwantam@gmail.com>"
+          "Manish Goregaokar <manishsmail@gmail.com>"
+        ];
+        features = {
+        };
+      };
       "unicode-width" = rec {
         crateName = "unicode-width";
         version = "0.1.9";
@@ -3557,6 +3847,35 @@ rec {
         ];
 
       };
+      "uuid" = rec {
+        crateName = "uuid";
+        version = "0.8.2";
+        edition = "2018";
+        sha256 = "1dy4ldcp7rnzjy56dxh7d2sgrcvn4q77y0a8r0a48946h66zjp5w";
+        authors = [
+          "Ashley Mannix<ashleymannix@live.com.au>"
+          "Christopher Armstrong"
+          "Dylan DPC<dylan.dpc@gmail.com>"
+          "Hunar Roop Kahlon<hunar.roop@gmail.com>"
+        ];
+        dependencies = [
+          {
+            name = "getrandom";
+            packageId = "getrandom";
+            optional = true;
+          }
+        ];
+        features = {
+          "default" = [ "std" ];
+          "guid" = [ "winapi" ];
+          "stdweb" = [ "getrandom" "getrandom/js" ];
+          "v3" = [ "md5" ];
+          "v4" = [ "getrandom" ];
+          "v5" = [ "sha1" ];
+          "wasm-bindgen" = [ "getrandom" "getrandom/js" ];
+        };
+        resolvedDefaultFeatures = [ "default" "getrandom" "std" "v4" ];
+      };
       "vec_map" = rec {
         crateName = "vec_map";
         version = "0.8.2";
@@ -3601,6 +3920,33 @@ rec {
         sha256 = "0gs8grwdlgh0xq660d7wr80x14vxbizmd8dbp29p2pdncx8lp1s9";
         authors = [
           "Sergio Benitez <sb@sergio.bz>"
+        ];
+
+      };
+      "walkdir" = rec {
+        crateName = "walkdir";
+        version = "2.3.2";
+        edition = "2018";
+        sha256 = "0mnszy33685v8y9js8mw6x2p3iddqs8vfj7n2dhqddnlbirz5340";
+        authors = [
+          "Andrew Gallant <jamslam@gmail.com>"
+        ];
+        dependencies = [
+          {
+            name = "same-file";
+            packageId = "same-file";
+          }
+          {
+            name = "winapi";
+            packageId = "winapi";
+            target = { target, features }: (target."windows" or false);
+            features = [ "std" "winnt" ];
+          }
+          {
+            name = "winapi-util";
+            packageId = "winapi-util";
+            target = { target, features }: (target."windows" or false);
+          }
         ];
 
       };
@@ -3758,9 +4104,9 @@ rec {
       };
       "wasi" = rec {
         crateName = "wasi";
-        version = "0.10.0+wasi-snapshot-preview1";
+        version = "0.10.2+wasi-snapshot-preview1";
         edition = "2018";
-        sha256 = "07y3l8mzfzzz4cj09c8y90yak4hpsi9g7pllyzpr6xvwrabka50s";
+        sha256 = "1ii7nff4y1mpcrxzzvbpgxm7a1nn3szjf1n21jnx37c2g6dbsvzx";
         authors = [
           "The Cranelift Project Developers"
         ];
@@ -3793,7 +4139,7 @@ rec {
         features = {
           "debug" = [ "impl-debug" ];
         };
-        resolvedDefaultFeatures = [ "cfg" "consoleapi" "errhandlingapi" "evntrace" "fileapi" "handleapi" "in6addr" "inaddr" "ioapiset" "minwinbase" "minwindef" "mstcpip" "mswsock" "namedpipeapi" "ntdef" "ntsecapi" "ntstatus" "processenv" "profileapi" "std" "synchapi" "sysinfoapi" "threadpoollegacyapiset" "timezoneapi" "winbase" "wincon" "windef" "winerror" "winioctl" "winnt" "winsock2" "ws2def" "ws2ipdef" "ws2tcpip" ];
+        resolvedDefaultFeatures = [ "cfg" "consoleapi" "errhandlingapi" "evntrace" "fileapi" "handleapi" "in6addr" "inaddr" "ioapiset" "minwinbase" "minwindef" "mswsock" "namedpipeapi" "ntdef" "ntsecapi" "processenv" "profileapi" "std" "synchapi" "sysinfoapi" "threadpoollegacyapiset" "timezoneapi" "winbase" "wincon" "windef" "winerror" "winioctl" "winnt" "winsock2" "ws2def" "ws2ipdef" "ws2tcpip" ];
       };
       "winapi-i686-pc-windows-gnu" = rec {
         crateName = "winapi-i686-pc-windows-gnu";
@@ -3830,6 +4176,792 @@ rec {
         sha256 = "0gqq64czqb64kskjryj8isp62m2sgvx25yyj3kpc2myh85w24bki";
         authors = [
           "Peter Atashian <retep998@gmail.com>"
+        ];
+
+      };
+      "windows-sys" = rec {
+        crateName = "windows-sys";
+        version = "0.32.0";
+        edition = "2018";
+        sha256 = "1imdvrsbivgrvzb9261aa77ws391l24s3r1b0wna34jz31vf9xix";
+        authors = [
+          "Microsoft"
+        ];
+        dependencies = [
+          {
+            name = "windows_aarch64_msvc";
+            packageId = "windows_aarch64_msvc";
+            target = { target, features }: (stdenv.hostPlatform.config == "aarch64-pc-windows-msvc");
+          }
+          {
+            name = "windows_aarch64_msvc";
+            packageId = "windows_aarch64_msvc";
+            target = { target, features }: (stdenv.hostPlatform.config == "aarch64-uwp-windows-msvc");
+          }
+          {
+            name = "windows_i686_gnu";
+            packageId = "windows_i686_gnu";
+            target = { target, features }: (stdenv.hostPlatform.config == "i686-pc-windows-gnu");
+          }
+          {
+            name = "windows_i686_gnu";
+            packageId = "windows_i686_gnu";
+            target = { target, features }: (stdenv.hostPlatform.config == "i686-uwp-windows-gnu");
+          }
+          {
+            name = "windows_i686_msvc";
+            packageId = "windows_i686_msvc";
+            target = { target, features }: (stdenv.hostPlatform.config == "i686-pc-windows-msvc");
+          }
+          {
+            name = "windows_i686_msvc";
+            packageId = "windows_i686_msvc";
+            target = { target, features }: (stdenv.hostPlatform.config == "i686-uwp-windows-msvc");
+          }
+          {
+            name = "windows_x86_64_gnu";
+            packageId = "windows_x86_64_gnu";
+            target = { target, features }: (stdenv.hostPlatform.config == "x86_64-pc-windows-gnu");
+          }
+          {
+            name = "windows_x86_64_gnu";
+            packageId = "windows_x86_64_gnu";
+            target = { target, features }: (stdenv.hostPlatform.config == "x86_64-uwp-windows-gnu");
+          }
+          {
+            name = "windows_x86_64_msvc";
+            packageId = "windows_x86_64_msvc";
+            target = { target, features }: (stdenv.hostPlatform.config == "x86_64-pc-windows-msvc");
+          }
+          {
+            name = "windows_x86_64_msvc";
+            packageId = "windows_x86_64_msvc";
+            target = { target, features }: (stdenv.hostPlatform.config == "x86_64-uwp-windows-msvc");
+          }
+        ];
+        features = {
+          "AI_MachineLearning" = [ "AI" ];
+          "AI_MachineLearning_Preview" = [ "AI_MachineLearning" ];
+          "ApplicationModel_Activation" = [ "ApplicationModel" ];
+          "ApplicationModel_AppExtensions" = [ "ApplicationModel" ];
+          "ApplicationModel_AppService" = [ "ApplicationModel" ];
+          "ApplicationModel_Appointments" = [ "ApplicationModel" ];
+          "ApplicationModel_Appointments_AppointmentsProvider" = [ "ApplicationModel_Appointments" ];
+          "ApplicationModel_Appointments_DataProvider" = [ "ApplicationModel_Appointments" ];
+          "ApplicationModel_Background" = [ "ApplicationModel" ];
+          "ApplicationModel_Calls" = [ "ApplicationModel" ];
+          "ApplicationModel_Calls_Background" = [ "ApplicationModel_Calls" ];
+          "ApplicationModel_Calls_Provider" = [ "ApplicationModel_Calls" ];
+          "ApplicationModel_Chat" = [ "ApplicationModel" ];
+          "ApplicationModel_CommunicationBlocking" = [ "ApplicationModel" ];
+          "ApplicationModel_Contacts" = [ "ApplicationModel" ];
+          "ApplicationModel_Contacts_DataProvider" = [ "ApplicationModel_Contacts" ];
+          "ApplicationModel_Contacts_Provider" = [ "ApplicationModel_Contacts" ];
+          "ApplicationModel_ConversationalAgent" = [ "ApplicationModel" ];
+          "ApplicationModel_Core" = [ "ApplicationModel" ];
+          "ApplicationModel_DataTransfer" = [ "ApplicationModel" ];
+          "ApplicationModel_DataTransfer_DragDrop" = [ "ApplicationModel_DataTransfer" ];
+          "ApplicationModel_DataTransfer_DragDrop_Core" = [ "ApplicationModel_DataTransfer_DragDrop" ];
+          "ApplicationModel_DataTransfer_ShareTarget" = [ "ApplicationModel_DataTransfer" ];
+          "ApplicationModel_Email" = [ "ApplicationModel" ];
+          "ApplicationModel_Email_DataProvider" = [ "ApplicationModel_Email" ];
+          "ApplicationModel_ExtendedExecution" = [ "ApplicationModel" ];
+          "ApplicationModel_ExtendedExecution_Foreground" = [ "ApplicationModel_ExtendedExecution" ];
+          "ApplicationModel_Holographic" = [ "ApplicationModel" ];
+          "ApplicationModel_LockScreen" = [ "ApplicationModel" ];
+          "ApplicationModel_Payments" = [ "ApplicationModel" ];
+          "ApplicationModel_Payments_Provider" = [ "ApplicationModel_Payments" ];
+          "ApplicationModel_Preview" = [ "ApplicationModel" ];
+          "ApplicationModel_Preview_Holographic" = [ "ApplicationModel_Preview" ];
+          "ApplicationModel_Preview_InkWorkspace" = [ "ApplicationModel_Preview" ];
+          "ApplicationModel_Preview_Notes" = [ "ApplicationModel_Preview" ];
+          "ApplicationModel_Resources" = [ "ApplicationModel" ];
+          "ApplicationModel_Resources_Core" = [ "ApplicationModel_Resources" ];
+          "ApplicationModel_Resources_Management" = [ "ApplicationModel_Resources" ];
+          "ApplicationModel_Search" = [ "ApplicationModel" ];
+          "ApplicationModel_Search_Core" = [ "ApplicationModel_Search" ];
+          "ApplicationModel_SocialInfo" = [ "ApplicationModel" ];
+          "ApplicationModel_SocialInfo_Provider" = [ "ApplicationModel_SocialInfo" ];
+          "ApplicationModel_Store" = [ "ApplicationModel" ];
+          "ApplicationModel_Store_LicenseManagement" = [ "ApplicationModel_Store" ];
+          "ApplicationModel_Store_Preview" = [ "ApplicationModel_Store" ];
+          "ApplicationModel_Store_Preview_InstallControl" = [ "ApplicationModel_Store_Preview" ];
+          "ApplicationModel_UserActivities" = [ "ApplicationModel" ];
+          "ApplicationModel_UserActivities_Core" = [ "ApplicationModel_UserActivities" ];
+          "ApplicationModel_UserDataAccounts" = [ "ApplicationModel" ];
+          "ApplicationModel_UserDataAccounts_Provider" = [ "ApplicationModel_UserDataAccounts" ];
+          "ApplicationModel_UserDataAccounts_SystemAccess" = [ "ApplicationModel_UserDataAccounts" ];
+          "ApplicationModel_UserDataTasks" = [ "ApplicationModel" ];
+          "ApplicationModel_UserDataTasks_DataProvider" = [ "ApplicationModel_UserDataTasks" ];
+          "ApplicationModel_VoiceCommands" = [ "ApplicationModel" ];
+          "ApplicationModel_Wallet" = [ "ApplicationModel" ];
+          "ApplicationModel_Wallet_System" = [ "ApplicationModel_Wallet" ];
+          "Data_Html" = [ "Data" ];
+          "Data_Json" = [ "Data" ];
+          "Data_Pdf" = [ "Data" ];
+          "Data_Text" = [ "Data" ];
+          "Data_Xml" = [ "Data" ];
+          "Data_Xml_Dom" = [ "Data_Xml" ];
+          "Data_Xml_Xsl" = [ "Data_Xml" ];
+          "Devices_Adc" = [ "Devices" ];
+          "Devices_Adc_Provider" = [ "Devices_Adc" ];
+          "Devices_AllJoyn" = [ "Devices" ];
+          "Devices_Background" = [ "Devices" ];
+          "Devices_Bluetooth" = [ "Devices" ];
+          "Devices_Bluetooth_Advertisement" = [ "Devices_Bluetooth" ];
+          "Devices_Bluetooth_Background" = [ "Devices_Bluetooth" ];
+          "Devices_Bluetooth_GenericAttributeProfile" = [ "Devices_Bluetooth" ];
+          "Devices_Bluetooth_Rfcomm" = [ "Devices_Bluetooth" ];
+          "Devices_Custom" = [ "Devices" ];
+          "Devices_Display" = [ "Devices" ];
+          "Devices_Display_Core" = [ "Devices_Display" ];
+          "Devices_Enumeration" = [ "Devices" ];
+          "Devices_Enumeration_Pnp" = [ "Devices_Enumeration" ];
+          "Devices_Geolocation" = [ "Devices" ];
+          "Devices_Geolocation_Geofencing" = [ "Devices_Geolocation" ];
+          "Devices_Gpio" = [ "Devices" ];
+          "Devices_Gpio_Provider" = [ "Devices_Gpio" ];
+          "Devices_Haptics" = [ "Devices" ];
+          "Devices_HumanInterfaceDevice" = [ "Devices" ];
+          "Devices_I2c" = [ "Devices" ];
+          "Devices_I2c_Provider" = [ "Devices_I2c" ];
+          "Devices_Input" = [ "Devices" ];
+          "Devices_Input_Preview" = [ "Devices_Input" ];
+          "Devices_Lights" = [ "Devices" ];
+          "Devices_Lights_Effects" = [ "Devices_Lights" ];
+          "Devices_Midi" = [ "Devices" ];
+          "Devices_Perception" = [ "Devices" ];
+          "Devices_Perception_Provider" = [ "Devices_Perception" ];
+          "Devices_PointOfService" = [ "Devices" ];
+          "Devices_PointOfService_Provider" = [ "Devices_PointOfService" ];
+          "Devices_Portable" = [ "Devices" ];
+          "Devices_Power" = [ "Devices" ];
+          "Devices_Printers" = [ "Devices" ];
+          "Devices_Printers_Extensions" = [ "Devices_Printers" ];
+          "Devices_Pwm" = [ "Devices" ];
+          "Devices_Pwm_Provider" = [ "Devices_Pwm" ];
+          "Devices_Radios" = [ "Devices" ];
+          "Devices_Scanners" = [ "Devices" ];
+          "Devices_Sensors" = [ "Devices" ];
+          "Devices_Sensors_Custom" = [ "Devices_Sensors" ];
+          "Devices_SerialCommunication" = [ "Devices" ];
+          "Devices_SmartCards" = [ "Devices" ];
+          "Devices_Sms" = [ "Devices" ];
+          "Devices_Spi" = [ "Devices" ];
+          "Devices_Spi_Provider" = [ "Devices_Spi" ];
+          "Devices_Usb" = [ "Devices" ];
+          "Devices_WiFi" = [ "Devices" ];
+          "Devices_WiFiDirect" = [ "Devices" ];
+          "Devices_WiFiDirect_Services" = [ "Devices_WiFiDirect" ];
+          "Embedded_DeviceLockdown" = [ "Embedded" ];
+          "Foundation_Collections" = [ "Foundation" ];
+          "Foundation_Diagnostics" = [ "Foundation" ];
+          "Foundation_Metadata" = [ "Foundation" ];
+          "Foundation_Numerics" = [ "Foundation" ];
+          "Gaming_Input" = [ "Gaming" ];
+          "Gaming_Input_Custom" = [ "Gaming_Input" ];
+          "Gaming_Input_ForceFeedback" = [ "Gaming_Input" ];
+          "Gaming_Input_Preview" = [ "Gaming_Input" ];
+          "Gaming_Preview" = [ "Gaming" ];
+          "Gaming_Preview_GamesEnumeration" = [ "Gaming_Preview" ];
+          "Gaming_UI" = [ "Gaming" ];
+          "Gaming_XboxLive" = [ "Gaming" ];
+          "Gaming_XboxLive_Storage" = [ "Gaming_XboxLive" ];
+          "Globalization_Collation" = [ "Globalization" ];
+          "Globalization_DateTimeFormatting" = [ "Globalization" ];
+          "Globalization_Fonts" = [ "Globalization" ];
+          "Globalization_NumberFormatting" = [ "Globalization" ];
+          "Globalization_PhoneNumberFormatting" = [ "Globalization" ];
+          "Graphics_Capture" = [ "Graphics" ];
+          "Graphics_DirectX" = [ "Graphics" ];
+          "Graphics_DirectX_Direct3D11" = [ "Graphics_DirectX" ];
+          "Graphics_Display" = [ "Graphics" ];
+          "Graphics_Display_Core" = [ "Graphics_Display" ];
+          "Graphics_Effects" = [ "Graphics" ];
+          "Graphics_Holographic" = [ "Graphics" ];
+          "Graphics_Imaging" = [ "Graphics" ];
+          "Graphics_Printing" = [ "Graphics" ];
+          "Graphics_Printing3D" = [ "Graphics" ];
+          "Graphics_Printing_OptionDetails" = [ "Graphics_Printing" ];
+          "Graphics_Printing_PrintSupport" = [ "Graphics_Printing" ];
+          "Graphics_Printing_PrintTicket" = [ "Graphics_Printing" ];
+          "Graphics_Printing_Workflow" = [ "Graphics_Printing" ];
+          "Management_Core" = [ "Management" ];
+          "Management_Deployment" = [ "Management" ];
+          "Management_Deployment_Preview" = [ "Management_Deployment" ];
+          "Management_Policies" = [ "Management" ];
+          "Management_Update" = [ "Management" ];
+          "Management_Workplace" = [ "Management" ];
+          "Media_AppBroadcasting" = [ "Media" ];
+          "Media_AppRecording" = [ "Media" ];
+          "Media_Audio" = [ "Media" ];
+          "Media_Capture" = [ "Media" ];
+          "Media_Capture_Core" = [ "Media_Capture" ];
+          "Media_Capture_Frames" = [ "Media_Capture" ];
+          "Media_Casting" = [ "Media" ];
+          "Media_ClosedCaptioning" = [ "Media" ];
+          "Media_ContentRestrictions" = [ "Media" ];
+          "Media_Control" = [ "Media" ];
+          "Media_Core" = [ "Media" ];
+          "Media_Core_Preview" = [ "Media_Core" ];
+          "Media_Devices" = [ "Media" ];
+          "Media_Devices_Core" = [ "Media_Devices" ];
+          "Media_DialProtocol" = [ "Media" ];
+          "Media_Editing" = [ "Media" ];
+          "Media_Effects" = [ "Media" ];
+          "Media_FaceAnalysis" = [ "Media" ];
+          "Media_Import" = [ "Media" ];
+          "Media_MediaProperties" = [ "Media" ];
+          "Media_Miracast" = [ "Media" ];
+          "Media_Ocr" = [ "Media" ];
+          "Media_PlayTo" = [ "Media" ];
+          "Media_Playback" = [ "Media" ];
+          "Media_Playlists" = [ "Media" ];
+          "Media_Protection" = [ "Media" ];
+          "Media_Protection_PlayReady" = [ "Media_Protection" ];
+          "Media_Render" = [ "Media" ];
+          "Media_SpeechRecognition" = [ "Media" ];
+          "Media_SpeechSynthesis" = [ "Media" ];
+          "Media_Streaming" = [ "Media" ];
+          "Media_Streaming_Adaptive" = [ "Media_Streaming" ];
+          "Media_Transcoding" = [ "Media" ];
+          "Networking_BackgroundTransfer" = [ "Networking" ];
+          "Networking_Connectivity" = [ "Networking" ];
+          "Networking_NetworkOperators" = [ "Networking" ];
+          "Networking_Proximity" = [ "Networking" ];
+          "Networking_PushNotifications" = [ "Networking" ];
+          "Networking_ServiceDiscovery" = [ "Networking" ];
+          "Networking_ServiceDiscovery_Dnssd" = [ "Networking_ServiceDiscovery" ];
+          "Networking_Sockets" = [ "Networking" ];
+          "Networking_Vpn" = [ "Networking" ];
+          "Networking_XboxLive" = [ "Networking" ];
+          "Perception_Automation" = [ "Perception" ];
+          "Perception_Automation_Core" = [ "Perception_Automation" ];
+          "Perception_People" = [ "Perception" ];
+          "Perception_Spatial" = [ "Perception" ];
+          "Perception_Spatial_Preview" = [ "Perception_Spatial" ];
+          "Perception_Spatial_Surfaces" = [ "Perception_Spatial" ];
+          "Phone_ApplicationModel" = [ "Phone" ];
+          "Phone_Devices" = [ "Phone" ];
+          "Phone_Devices_Notification" = [ "Phone_Devices" ];
+          "Phone_Devices_Power" = [ "Phone_Devices" ];
+          "Phone_Management" = [ "Phone" ];
+          "Phone_Management_Deployment" = [ "Phone_Management" ];
+          "Phone_Media" = [ "Phone" ];
+          "Phone_Media_Devices" = [ "Phone_Media" ];
+          "Phone_Notification" = [ "Phone" ];
+          "Phone_Notification_Management" = [ "Phone_Notification" ];
+          "Phone_PersonalInformation" = [ "Phone" ];
+          "Phone_PersonalInformation_Provisioning" = [ "Phone_PersonalInformation" ];
+          "Phone_Speech" = [ "Phone" ];
+          "Phone_Speech_Recognition" = [ "Phone_Speech" ];
+          "Phone_StartScreen" = [ "Phone" ];
+          "Phone_System" = [ "Phone" ];
+          "Phone_System_Power" = [ "Phone_System" ];
+          "Phone_System_Profile" = [ "Phone_System" ];
+          "Phone_System_UserProfile" = [ "Phone_System" ];
+          "Phone_System_UserProfile_GameServices" = [ "Phone_System_UserProfile" ];
+          "Phone_System_UserProfile_GameServices_Core" = [ "Phone_System_UserProfile_GameServices" ];
+          "Phone_UI" = [ "Phone" ];
+          "Phone_UI_Input" = [ "Phone_UI" ];
+          "Security_Authentication" = [ "Security" ];
+          "Security_Authentication_Identity" = [ "Security_Authentication" ];
+          "Security_Authentication_Identity_Core" = [ "Security_Authentication_Identity" ];
+          "Security_Authentication_Identity_Provider" = [ "Security_Authentication_Identity" ];
+          "Security_Authentication_OnlineId" = [ "Security_Authentication" ];
+          "Security_Authentication_Web" = [ "Security_Authentication" ];
+          "Security_Authentication_Web_Core" = [ "Security_Authentication_Web" ];
+          "Security_Authentication_Web_Provider" = [ "Security_Authentication_Web" ];
+          "Security_Authorization" = [ "Security" ];
+          "Security_Authorization_AppCapabilityAccess" = [ "Security_Authorization" ];
+          "Security_Credentials" = [ "Security" ];
+          "Security_Credentials_UI" = [ "Security_Credentials" ];
+          "Security_Cryptography" = [ "Security" ];
+          "Security_Cryptography_Certificates" = [ "Security_Cryptography" ];
+          "Security_Cryptography_Core" = [ "Security_Cryptography" ];
+          "Security_Cryptography_DataProtection" = [ "Security_Cryptography" ];
+          "Security_DataProtection" = [ "Security" ];
+          "Security_EnterpriseData" = [ "Security" ];
+          "Security_ExchangeActiveSyncProvisioning" = [ "Security" ];
+          "Security_Isolation" = [ "Security" ];
+          "Services_Cortana" = [ "Services" ];
+          "Services_Maps" = [ "Services" ];
+          "Services_Maps_Guidance" = [ "Services_Maps" ];
+          "Services_Maps_LocalSearch" = [ "Services_Maps" ];
+          "Services_Maps_OfflineMaps" = [ "Services_Maps" ];
+          "Services_Store" = [ "Services" ];
+          "Services_TargetedContent" = [ "Services" ];
+          "Storage_AccessCache" = [ "Storage" ];
+          "Storage_BulkAccess" = [ "Storage" ];
+          "Storage_Compression" = [ "Storage" ];
+          "Storage_FileProperties" = [ "Storage" ];
+          "Storage_Pickers" = [ "Storage" ];
+          "Storage_Pickers_Provider" = [ "Storage_Pickers" ];
+          "Storage_Provider" = [ "Storage" ];
+          "Storage_Search" = [ "Storage" ];
+          "Storage_Streams" = [ "Storage" ];
+          "System_Diagnostics" = [ "System" ];
+          "System_Diagnostics_DevicePortal" = [ "System_Diagnostics" ];
+          "System_Diagnostics_Telemetry" = [ "System_Diagnostics" ];
+          "System_Diagnostics_TraceReporting" = [ "System_Diagnostics" ];
+          "System_Display" = [ "System" ];
+          "System_Implementation" = [ "System" ];
+          "System_Implementation_FileExplorer" = [ "System_Implementation" ];
+          "System_Inventory" = [ "System" ];
+          "System_Power" = [ "System" ];
+          "System_Power_Diagnostics" = [ "System_Power" ];
+          "System_Preview" = [ "System" ];
+          "System_Profile" = [ "System" ];
+          "System_Profile_SystemManufacturers" = [ "System_Profile" ];
+          "System_RemoteDesktop" = [ "System" ];
+          "System_RemoteDesktop_Input" = [ "System_RemoteDesktop" ];
+          "System_RemoteSystems" = [ "System" ];
+          "System_Threading" = [ "System" ];
+          "System_Threading_Core" = [ "System_Threading" ];
+          "System_Update" = [ "System" ];
+          "System_UserProfile" = [ "System" ];
+          "UI_Accessibility" = [ "UI" ];
+          "UI_ApplicationSettings" = [ "UI" ];
+          "UI_Composition" = [ "UI" ];
+          "UI_Composition_Core" = [ "UI_Composition" ];
+          "UI_Composition_Desktop" = [ "UI_Composition" ];
+          "UI_Composition_Diagnostics" = [ "UI_Composition" ];
+          "UI_Composition_Effects" = [ "UI_Composition" ];
+          "UI_Composition_Interactions" = [ "UI_Composition" ];
+          "UI_Composition_Scenes" = [ "UI_Composition" ];
+          "UI_Core" = [ "UI" ];
+          "UI_Core_AnimationMetrics" = [ "UI_Core" ];
+          "UI_Core_Preview" = [ "UI_Core" ];
+          "UI_Input" = [ "UI" ];
+          "UI_Input_Core" = [ "UI_Input" ];
+          "UI_Input_Inking" = [ "UI_Input" ];
+          "UI_Input_Inking_Analysis" = [ "UI_Input_Inking" ];
+          "UI_Input_Inking_Core" = [ "UI_Input_Inking" ];
+          "UI_Input_Inking_Preview" = [ "UI_Input_Inking" ];
+          "UI_Input_Preview" = [ "UI_Input" ];
+          "UI_Input_Preview_Injection" = [ "UI_Input_Preview" ];
+          "UI_Input_Spatial" = [ "UI_Input" ];
+          "UI_Notifications" = [ "UI" ];
+          "UI_Notifications_Management" = [ "UI_Notifications" ];
+          "UI_Popups" = [ "UI" ];
+          "UI_Shell" = [ "UI" ];
+          "UI_StartScreen" = [ "UI" ];
+          "UI_Text" = [ "UI" ];
+          "UI_Text_Core" = [ "UI_Text" ];
+          "UI_UIAutomation" = [ "UI" ];
+          "UI_UIAutomation_Core" = [ "UI_UIAutomation" ];
+          "UI_ViewManagement" = [ "UI" ];
+          "UI_ViewManagement_Core" = [ "UI_ViewManagement" ];
+          "UI_WebUI" = [ "UI" ];
+          "UI_WebUI_Core" = [ "UI_WebUI" ];
+          "UI_WindowManagement" = [ "UI" ];
+          "UI_WindowManagement_Preview" = [ "UI_WindowManagement" ];
+          "UI_Xaml" = [ "UI" ];
+          "UI_Xaml_Automation" = [ "UI_Xaml" ];
+          "UI_Xaml_Automation_Peers" = [ "UI_Xaml_Automation" ];
+          "UI_Xaml_Automation_Provider" = [ "UI_Xaml_Automation" ];
+          "UI_Xaml_Automation_Text" = [ "UI_Xaml_Automation" ];
+          "UI_Xaml_Controls" = [ "UI_Xaml" ];
+          "UI_Xaml_Controls_Maps" = [ "UI_Xaml_Controls" ];
+          "UI_Xaml_Controls_Primitives" = [ "UI_Xaml_Controls" ];
+          "UI_Xaml_Core" = [ "UI_Xaml" ];
+          "UI_Xaml_Core_Direct" = [ "UI_Xaml_Core" ];
+          "UI_Xaml_Data" = [ "UI_Xaml" ];
+          "UI_Xaml_Documents" = [ "UI_Xaml" ];
+          "UI_Xaml_Hosting" = [ "UI_Xaml" ];
+          "UI_Xaml_Input" = [ "UI_Xaml" ];
+          "UI_Xaml_Interop" = [ "UI_Xaml" ];
+          "UI_Xaml_Markup" = [ "UI_Xaml" ];
+          "UI_Xaml_Media" = [ "UI_Xaml" ];
+          "UI_Xaml_Media_Animation" = [ "UI_Xaml_Media" ];
+          "UI_Xaml_Media_Imaging" = [ "UI_Xaml_Media" ];
+          "UI_Xaml_Media_Media3D" = [ "UI_Xaml_Media" ];
+          "UI_Xaml_Navigation" = [ "UI_Xaml" ];
+          "UI_Xaml_Printing" = [ "UI_Xaml" ];
+          "UI_Xaml_Resources" = [ "UI_Xaml" ];
+          "UI_Xaml_Shapes" = [ "UI_Xaml" ];
+          "Web_AtomPub" = [ "Web" ];
+          "Web_Http" = [ "Web" ];
+          "Web_Http_Diagnostics" = [ "Web_Http" ];
+          "Web_Http_Filters" = [ "Web_Http" ];
+          "Web_Http_Headers" = [ "Web_Http" ];
+          "Web_Syndication" = [ "Web" ];
+          "Web_UI" = [ "Web" ];
+          "Web_UI_Interop" = [ "Web_UI" ];
+          "Win32_AI" = [ "Win32" ];
+          "Win32_AI_MachineLearning" = [ "Win32_AI" ];
+          "Win32_AI_MachineLearning_DirectML" = [ "Win32_AI_MachineLearning" ];
+          "Win32_AI_MachineLearning_WinML" = [ "Win32_AI_MachineLearning" ];
+          "Win32_Data" = [ "Win32" ];
+          "Win32_Data_HtmlHelp" = [ "Win32_Data" ];
+          "Win32_Data_RightsManagement" = [ "Win32_Data" ];
+          "Win32_Data_Xml" = [ "Win32_Data" ];
+          "Win32_Data_Xml_MsXml" = [ "Win32_Data_Xml" ];
+          "Win32_Data_Xml_XmlLite" = [ "Win32_Data_Xml" ];
+          "Win32_Devices" = [ "Win32" ];
+          "Win32_Devices_AllJoyn" = [ "Win32_Devices" ];
+          "Win32_Devices_BiometricFramework" = [ "Win32_Devices" ];
+          "Win32_Devices_Bluetooth" = [ "Win32_Devices" ];
+          "Win32_Devices_Communication" = [ "Win32_Devices" ];
+          "Win32_Devices_DeviceAccess" = [ "Win32_Devices" ];
+          "Win32_Devices_DeviceAndDriverInstallation" = [ "Win32_Devices" ];
+          "Win32_Devices_DeviceQuery" = [ "Win32_Devices" ];
+          "Win32_Devices_Display" = [ "Win32_Devices" ];
+          "Win32_Devices_Enumeration" = [ "Win32_Devices" ];
+          "Win32_Devices_Enumeration_Pnp" = [ "Win32_Devices_Enumeration" ];
+          "Win32_Devices_Fax" = [ "Win32_Devices" ];
+          "Win32_Devices_FunctionDiscovery" = [ "Win32_Devices" ];
+          "Win32_Devices_Geolocation" = [ "Win32_Devices" ];
+          "Win32_Devices_HumanInterfaceDevice" = [ "Win32_Devices" ];
+          "Win32_Devices_ImageAcquisition" = [ "Win32_Devices" ];
+          "Win32_Devices_PortableDevices" = [ "Win32_Devices" ];
+          "Win32_Devices_Properties" = [ "Win32_Devices" ];
+          "Win32_Devices_Pwm" = [ "Win32_Devices" ];
+          "Win32_Devices_Sensors" = [ "Win32_Devices" ];
+          "Win32_Devices_SerialCommunication" = [ "Win32_Devices" ];
+          "Win32_Devices_Tapi" = [ "Win32_Devices" ];
+          "Win32_Devices_Usb" = [ "Win32_Devices" ];
+          "Win32_Devices_WebServicesOnDevices" = [ "Win32_Devices" ];
+          "Win32_Foundation" = [ "Win32" ];
+          "Win32_Gaming" = [ "Win32" ];
+          "Win32_Globalization" = [ "Win32" ];
+          "Win32_Graphics" = [ "Win32" ];
+          "Win32_Graphics_CompositionSwapchain" = [ "Win32_Graphics" ];
+          "Win32_Graphics_DXCore" = [ "Win32_Graphics" ];
+          "Win32_Graphics_Direct2D" = [ "Win32_Graphics" ];
+          "Win32_Graphics_Direct2D_Common" = [ "Win32_Graphics_Direct2D" ];
+          "Win32_Graphics_Direct3D" = [ "Win32_Graphics" ];
+          "Win32_Graphics_Direct3D10" = [ "Win32_Graphics" ];
+          "Win32_Graphics_Direct3D11" = [ "Win32_Graphics" ];
+          "Win32_Graphics_Direct3D11on12" = [ "Win32_Graphics" ];
+          "Win32_Graphics_Direct3D12" = [ "Win32_Graphics" ];
+          "Win32_Graphics_Direct3D9" = [ "Win32_Graphics" ];
+          "Win32_Graphics_Direct3D9on12" = [ "Win32_Graphics" ];
+          "Win32_Graphics_Direct3D_Dxc" = [ "Win32_Graphics_Direct3D" ];
+          "Win32_Graphics_Direct3D_Fxc" = [ "Win32_Graphics_Direct3D" ];
+          "Win32_Graphics_DirectComposition" = [ "Win32_Graphics" ];
+          "Win32_Graphics_DirectDraw" = [ "Win32_Graphics" ];
+          "Win32_Graphics_DirectManipulation" = [ "Win32_Graphics" ];
+          "Win32_Graphics_DirectWrite" = [ "Win32_Graphics" ];
+          "Win32_Graphics_Dwm" = [ "Win32_Graphics" ];
+          "Win32_Graphics_Dxgi" = [ "Win32_Graphics" ];
+          "Win32_Graphics_Dxgi_Common" = [ "Win32_Graphics_Dxgi" ];
+          "Win32_Graphics_Gdi" = [ "Win32_Graphics" ];
+          "Win32_Graphics_Hlsl" = [ "Win32_Graphics" ];
+          "Win32_Graphics_Imaging" = [ "Win32_Graphics" ];
+          "Win32_Graphics_Imaging_D2D" = [ "Win32_Graphics_Imaging" ];
+          "Win32_Graphics_OpenGL" = [ "Win32_Graphics" ];
+          "Win32_Graphics_Printing" = [ "Win32_Graphics" ];
+          "Win32_Graphics_Printing_PrintTicket" = [ "Win32_Graphics_Printing" ];
+          "Win32_Management" = [ "Win32" ];
+          "Win32_Management_MobileDeviceManagementRegistration" = [ "Win32_Management" ];
+          "Win32_Media" = [ "Win32" ];
+          "Win32_Media_Audio" = [ "Win32_Media" ];
+          "Win32_Media_Audio_Apo" = [ "Win32_Media_Audio" ];
+          "Win32_Media_Audio_DirectMusic" = [ "Win32_Media_Audio" ];
+          "Win32_Media_Audio_DirectSound" = [ "Win32_Media_Audio" ];
+          "Win32_Media_Audio_Endpoints" = [ "Win32_Media_Audio" ];
+          "Win32_Media_Audio_XAudio2" = [ "Win32_Media_Audio" ];
+          "Win32_Media_DeviceManager" = [ "Win32_Media" ];
+          "Win32_Media_DirectShow" = [ "Win32_Media" ];
+          "Win32_Media_DirectShow_Xml" = [ "Win32_Media_DirectShow" ];
+          "Win32_Media_DxMediaObjects" = [ "Win32_Media" ];
+          "Win32_Media_KernelStreaming" = [ "Win32_Media" ];
+          "Win32_Media_LibrarySharingServices" = [ "Win32_Media" ];
+          "Win32_Media_MediaFoundation" = [ "Win32_Media" ];
+          "Win32_Media_MediaPlayer" = [ "Win32_Media" ];
+          "Win32_Media_Multimedia" = [ "Win32_Media" ];
+          "Win32_Media_PictureAcquisition" = [ "Win32_Media" ];
+          "Win32_Media_Speech" = [ "Win32_Media" ];
+          "Win32_Media_Streaming" = [ "Win32_Media" ];
+          "Win32_Media_WindowsMediaFormat" = [ "Win32_Media" ];
+          "Win32_NetworkManagement" = [ "Win32" ];
+          "Win32_NetworkManagement_Dhcp" = [ "Win32_NetworkManagement" ];
+          "Win32_NetworkManagement_Dns" = [ "Win32_NetworkManagement" ];
+          "Win32_NetworkManagement_InternetConnectionWizard" = [ "Win32_NetworkManagement" ];
+          "Win32_NetworkManagement_IpHelper" = [ "Win32_NetworkManagement" ];
+          "Win32_NetworkManagement_MobileBroadband" = [ "Win32_NetworkManagement" ];
+          "Win32_NetworkManagement_Multicast" = [ "Win32_NetworkManagement" ];
+          "Win32_NetworkManagement_Ndis" = [ "Win32_NetworkManagement" ];
+          "Win32_NetworkManagement_NetBios" = [ "Win32_NetworkManagement" ];
+          "Win32_NetworkManagement_NetManagement" = [ "Win32_NetworkManagement" ];
+          "Win32_NetworkManagement_NetShell" = [ "Win32_NetworkManagement" ];
+          "Win32_NetworkManagement_NetworkDiagnosticsFramework" = [ "Win32_NetworkManagement" ];
+          "Win32_NetworkManagement_NetworkPolicyServer" = [ "Win32_NetworkManagement" ];
+          "Win32_NetworkManagement_P2P" = [ "Win32_NetworkManagement" ];
+          "Win32_NetworkManagement_QoS" = [ "Win32_NetworkManagement" ];
+          "Win32_NetworkManagement_Rras" = [ "Win32_NetworkManagement" ];
+          "Win32_NetworkManagement_Snmp" = [ "Win32_NetworkManagement" ];
+          "Win32_NetworkManagement_WNet" = [ "Win32_NetworkManagement" ];
+          "Win32_NetworkManagement_WebDav" = [ "Win32_NetworkManagement" ];
+          "Win32_NetworkManagement_WiFi" = [ "Win32_NetworkManagement" ];
+          "Win32_NetworkManagement_WindowsConnectNow" = [ "Win32_NetworkManagement" ];
+          "Win32_NetworkManagement_WindowsConnectionManager" = [ "Win32_NetworkManagement" ];
+          "Win32_NetworkManagement_WindowsFilteringPlatform" = [ "Win32_NetworkManagement" ];
+          "Win32_NetworkManagement_WindowsFirewall" = [ "Win32_NetworkManagement" ];
+          "Win32_NetworkManagement_WindowsNetworkVirtualization" = [ "Win32_NetworkManagement" ];
+          "Win32_Networking" = [ "Win32" ];
+          "Win32_Networking_ActiveDirectory" = [ "Win32_Networking" ];
+          "Win32_Networking_BackgroundIntelligentTransferService" = [ "Win32_Networking" ];
+          "Win32_Networking_Clustering" = [ "Win32_Networking" ];
+          "Win32_Networking_HttpServer" = [ "Win32_Networking" ];
+          "Win32_Networking_Ldap" = [ "Win32_Networking" ];
+          "Win32_Networking_NetworkListManager" = [ "Win32_Networking" ];
+          "Win32_Networking_RemoteDifferentialCompression" = [ "Win32_Networking" ];
+          "Win32_Networking_WebSocket" = [ "Win32_Networking" ];
+          "Win32_Networking_WinHttp" = [ "Win32_Networking" ];
+          "Win32_Networking_WinInet" = [ "Win32_Networking" ];
+          "Win32_Networking_WinSock" = [ "Win32_Networking" ];
+          "Win32_Networking_WindowsWebServices" = [ "Win32_Networking" ];
+          "Win32_Security" = [ "Win32" ];
+          "Win32_Security_AppLocker" = [ "Win32_Security" ];
+          "Win32_Security_Authentication" = [ "Win32_Security" ];
+          "Win32_Security_Authentication_Identity" = [ "Win32_Security_Authentication" ];
+          "Win32_Security_Authentication_Identity_Provider" = [ "Win32_Security_Authentication_Identity" ];
+          "Win32_Security_Authorization" = [ "Win32_Security" ];
+          "Win32_Security_Authorization_UI" = [ "Win32_Security_Authorization" ];
+          "Win32_Security_ConfigurationSnapin" = [ "Win32_Security" ];
+          "Win32_Security_Credentials" = [ "Win32_Security" ];
+          "Win32_Security_Cryptography" = [ "Win32_Security" ];
+          "Win32_Security_Cryptography_Catalog" = [ "Win32_Security_Cryptography" ];
+          "Win32_Security_Cryptography_Certificates" = [ "Win32_Security_Cryptography" ];
+          "Win32_Security_Cryptography_Sip" = [ "Win32_Security_Cryptography" ];
+          "Win32_Security_Cryptography_UI" = [ "Win32_Security_Cryptography" ];
+          "Win32_Security_DiagnosticDataQuery" = [ "Win32_Security" ];
+          "Win32_Security_DirectoryServices" = [ "Win32_Security" ];
+          "Win32_Security_EnterpriseData" = [ "Win32_Security" ];
+          "Win32_Security_ExtensibleAuthenticationProtocol" = [ "Win32_Security" ];
+          "Win32_Security_Isolation" = [ "Win32_Security" ];
+          "Win32_Security_LicenseProtection" = [ "Win32_Security" ];
+          "Win32_Security_NetworkAccessProtection" = [ "Win32_Security" ];
+          "Win32_Security_Tpm" = [ "Win32_Security" ];
+          "Win32_Security_WinTrust" = [ "Win32_Security" ];
+          "Win32_Security_WinWlx" = [ "Win32_Security" ];
+          "Win32_Storage" = [ "Win32" ];
+          "Win32_Storage_Cabinets" = [ "Win32_Storage" ];
+          "Win32_Storage_CloudFilters" = [ "Win32_Storage" ];
+          "Win32_Storage_Compression" = [ "Win32_Storage" ];
+          "Win32_Storage_DataDeduplication" = [ "Win32_Storage" ];
+          "Win32_Storage_DistributedFileSystem" = [ "Win32_Storage" ];
+          "Win32_Storage_EnhancedStorage" = [ "Win32_Storage" ];
+          "Win32_Storage_FileHistory" = [ "Win32_Storage" ];
+          "Win32_Storage_FileServerResourceManager" = [ "Win32_Storage" ];
+          "Win32_Storage_FileSystem" = [ "Win32_Storage" ];
+          "Win32_Storage_Imapi" = [ "Win32_Storage" ];
+          "Win32_Storage_IndexServer" = [ "Win32_Storage" ];
+          "Win32_Storage_InstallableFileSystems" = [ "Win32_Storage" ];
+          "Win32_Storage_IscsiDisc" = [ "Win32_Storage" ];
+          "Win32_Storage_Jet" = [ "Win32_Storage" ];
+          "Win32_Storage_OfflineFiles" = [ "Win32_Storage" ];
+          "Win32_Storage_OperationRecorder" = [ "Win32_Storage" ];
+          "Win32_Storage_Packaging" = [ "Win32_Storage" ];
+          "Win32_Storage_Packaging_Appx" = [ "Win32_Storage_Packaging" ];
+          "Win32_Storage_Packaging_Opc" = [ "Win32_Storage_Packaging" ];
+          "Win32_Storage_ProjectedFileSystem" = [ "Win32_Storage" ];
+          "Win32_Storage_StructuredStorage" = [ "Win32_Storage" ];
+          "Win32_Storage_Vhd" = [ "Win32_Storage" ];
+          "Win32_Storage_VirtualDiskService" = [ "Win32_Storage" ];
+          "Win32_Storage_Vss" = [ "Win32_Storage" ];
+          "Win32_Storage_Xps" = [ "Win32_Storage" ];
+          "Win32_Storage_Xps_Printing" = [ "Win32_Storage_Xps" ];
+          "Win32_System" = [ "Win32" ];
+          "Win32_System_AddressBook" = [ "Win32_System" ];
+          "Win32_System_Antimalware" = [ "Win32_System" ];
+          "Win32_System_ApplicationInstallationAndServicing" = [ "Win32_System" ];
+          "Win32_System_ApplicationVerifier" = [ "Win32_System" ];
+          "Win32_System_AssessmentTool" = [ "Win32_System" ];
+          "Win32_System_Com" = [ "Win32_System" ];
+          "Win32_System_Com_CallObj" = [ "Win32_System_Com" ];
+          "Win32_System_Com_ChannelCredentials" = [ "Win32_System_Com" ];
+          "Win32_System_Com_Events" = [ "Win32_System_Com" ];
+          "Win32_System_Com_Marshal" = [ "Win32_System_Com" ];
+          "Win32_System_Com_StructuredStorage" = [ "Win32_System_Com" ];
+          "Win32_System_Com_UI" = [ "Win32_System_Com" ];
+          "Win32_System_Com_Urlmon" = [ "Win32_System_Com" ];
+          "Win32_System_ComponentServices" = [ "Win32_System" ];
+          "Win32_System_Console" = [ "Win32_System" ];
+          "Win32_System_Contacts" = [ "Win32_System" ];
+          "Win32_System_CorrelationVector" = [ "Win32_System" ];
+          "Win32_System_DataExchange" = [ "Win32_System" ];
+          "Win32_System_DeploymentServices" = [ "Win32_System" ];
+          "Win32_System_DesktopSharing" = [ "Win32_System" ];
+          "Win32_System_DeveloperLicensing" = [ "Win32_System" ];
+          "Win32_System_Diagnostics" = [ "Win32_System" ];
+          "Win32_System_Diagnostics_Ceip" = [ "Win32_System_Diagnostics" ];
+          "Win32_System_Diagnostics_Debug" = [ "Win32_System_Diagnostics" ];
+          "Win32_System_Diagnostics_Debug_WebApp" = [ "Win32_System_Diagnostics_Debug" ];
+          "Win32_System_Diagnostics_Etw" = [ "Win32_System_Diagnostics" ];
+          "Win32_System_Diagnostics_ProcessSnapshotting" = [ "Win32_System_Diagnostics" ];
+          "Win32_System_Diagnostics_ToolHelp" = [ "Win32_System_Diagnostics" ];
+          "Win32_System_DistributedTransactionCoordinator" = [ "Win32_System" ];
+          "Win32_System_Environment" = [ "Win32_System" ];
+          "Win32_System_ErrorReporting" = [ "Win32_System" ];
+          "Win32_System_EventCollector" = [ "Win32_System" ];
+          "Win32_System_EventLog" = [ "Win32_System" ];
+          "Win32_System_EventNotificationService" = [ "Win32_System" ];
+          "Win32_System_GroupPolicy" = [ "Win32_System" ];
+          "Win32_System_HostCompute" = [ "Win32_System" ];
+          "Win32_System_HostComputeNetwork" = [ "Win32_System" ];
+          "Win32_System_HostComputeSystem" = [ "Win32_System" ];
+          "Win32_System_Hypervisor" = [ "Win32_System" ];
+          "Win32_System_IO" = [ "Win32_System" ];
+          "Win32_System_Iis" = [ "Win32_System" ];
+          "Win32_System_Ioctl" = [ "Win32_System" ];
+          "Win32_System_JobObjects" = [ "Win32_System" ];
+          "Win32_System_Js" = [ "Win32_System" ];
+          "Win32_System_Kernel" = [ "Win32_System" ];
+          "Win32_System_LibraryLoader" = [ "Win32_System" ];
+          "Win32_System_Mailslots" = [ "Win32_System" ];
+          "Win32_System_Mapi" = [ "Win32_System" ];
+          "Win32_System_Memory" = [ "Win32_System" ];
+          "Win32_System_Memory_NonVolatile" = [ "Win32_System_Memory" ];
+          "Win32_System_MessageQueuing" = [ "Win32_System" ];
+          "Win32_System_MixedReality" = [ "Win32_System" ];
+          "Win32_System_Mmc" = [ "Win32_System" ];
+          "Win32_System_Ole" = [ "Win32_System" ];
+          "Win32_System_ParentalControls" = [ "Win32_System" ];
+          "Win32_System_PasswordManagement" = [ "Win32_System" ];
+          "Win32_System_Performance" = [ "Win32_System" ];
+          "Win32_System_Performance_HardwareCounterProfiling" = [ "Win32_System_Performance" ];
+          "Win32_System_Pipes" = [ "Win32_System" ];
+          "Win32_System_Power" = [ "Win32_System" ];
+          "Win32_System_ProcessStatus" = [ "Win32_System" ];
+          "Win32_System_RealTimeCommunications" = [ "Win32_System" ];
+          "Win32_System_Recovery" = [ "Win32_System" ];
+          "Win32_System_Registry" = [ "Win32_System" ];
+          "Win32_System_RemoteAssistance" = [ "Win32_System" ];
+          "Win32_System_RemoteDesktop" = [ "Win32_System" ];
+          "Win32_System_RemoteManagement" = [ "Win32_System" ];
+          "Win32_System_RestartManager" = [ "Win32_System" ];
+          "Win32_System_Restore" = [ "Win32_System" ];
+          "Win32_System_Rpc" = [ "Win32_System" ];
+          "Win32_System_Search" = [ "Win32_System" ];
+          "Win32_System_Search_Common" = [ "Win32_System_Search" ];
+          "Win32_System_SecurityCenter" = [ "Win32_System" ];
+          "Win32_System_ServerBackup" = [ "Win32_System" ];
+          "Win32_System_Services" = [ "Win32_System" ];
+          "Win32_System_SettingsManagementInfrastructure" = [ "Win32_System" ];
+          "Win32_System_SetupAndMigration" = [ "Win32_System" ];
+          "Win32_System_Shutdown" = [ "Win32_System" ];
+          "Win32_System_SideShow" = [ "Win32_System" ];
+          "Win32_System_SqlLite" = [ "Win32_System" ];
+          "Win32_System_StationsAndDesktops" = [ "Win32_System" ];
+          "Win32_System_SubsystemForLinux" = [ "Win32_System" ];
+          "Win32_System_SystemInformation" = [ "Win32_System" ];
+          "Win32_System_SystemServices" = [ "Win32_System" ];
+          "Win32_System_TaskScheduler" = [ "Win32_System" ];
+          "Win32_System_Threading" = [ "Win32_System" ];
+          "Win32_System_Time" = [ "Win32_System" ];
+          "Win32_System_TpmBaseServices" = [ "Win32_System" ];
+          "Win32_System_TransactionServer" = [ "Win32_System" ];
+          "Win32_System_UpdateAgent" = [ "Win32_System" ];
+          "Win32_System_UpdateAssessment" = [ "Win32_System" ];
+          "Win32_System_UserAccessLogging" = [ "Win32_System" ];
+          "Win32_System_VirtualDosMachines" = [ "Win32_System" ];
+          "Win32_System_WinRT" = [ "Win32_System" ];
+          "Win32_System_WinRT_AllJoyn" = [ "Win32_System_WinRT" ];
+          "Win32_System_WinRT_Composition" = [ "Win32_System_WinRT" ];
+          "Win32_System_WinRT_CoreInputView" = [ "Win32_System_WinRT" ];
+          "Win32_System_WinRT_Direct3D11" = [ "Win32_System_WinRT" ];
+          "Win32_System_WinRT_Display" = [ "Win32_System_WinRT" ];
+          "Win32_System_WinRT_Graphics" = [ "Win32_System_WinRT" ];
+          "Win32_System_WinRT_Graphics_Capture" = [ "Win32_System_WinRT_Graphics" ];
+          "Win32_System_WinRT_Graphics_Direct2D" = [ "Win32_System_WinRT_Graphics" ];
+          "Win32_System_WinRT_Graphics_Imaging" = [ "Win32_System_WinRT_Graphics" ];
+          "Win32_System_WinRT_Holographic" = [ "Win32_System_WinRT" ];
+          "Win32_System_WinRT_Isolation" = [ "Win32_System_WinRT" ];
+          "Win32_System_WinRT_ML" = [ "Win32_System_WinRT" ];
+          "Win32_System_WinRT_Media" = [ "Win32_System_WinRT" ];
+          "Win32_System_WinRT_Pdf" = [ "Win32_System_WinRT" ];
+          "Win32_System_WinRT_Printing" = [ "Win32_System_WinRT" ];
+          "Win32_System_WinRT_Shell" = [ "Win32_System_WinRT" ];
+          "Win32_System_WinRT_Storage" = [ "Win32_System_WinRT" ];
+          "Win32_System_WinRT_Xaml" = [ "Win32_System_WinRT" ];
+          "Win32_System_WindowsProgramming" = [ "Win32_System" ];
+          "Win32_System_WindowsSync" = [ "Win32_System" ];
+          "Win32_System_Wmi" = [ "Win32_System" ];
+          "Win32_UI" = [ "Win32" ];
+          "Win32_UI_Accessibility" = [ "Win32_UI" ];
+          "Win32_UI_Animation" = [ "Win32_UI" ];
+          "Win32_UI_ColorSystem" = [ "Win32_UI" ];
+          "Win32_UI_Controls" = [ "Win32_UI" ];
+          "Win32_UI_Controls_Dialogs" = [ "Win32_UI_Controls" ];
+          "Win32_UI_Controls_RichEdit" = [ "Win32_UI_Controls" ];
+          "Win32_UI_HiDpi" = [ "Win32_UI" ];
+          "Win32_UI_Input" = [ "Win32_UI" ];
+          "Win32_UI_Input_Ime" = [ "Win32_UI_Input" ];
+          "Win32_UI_Input_Ink" = [ "Win32_UI_Input" ];
+          "Win32_UI_Input_KeyboardAndMouse" = [ "Win32_UI_Input" ];
+          "Win32_UI_Input_Pointer" = [ "Win32_UI_Input" ];
+          "Win32_UI_Input_Radial" = [ "Win32_UI_Input" ];
+          "Win32_UI_Input_Touch" = [ "Win32_UI_Input" ];
+          "Win32_UI_Input_XboxController" = [ "Win32_UI_Input" ];
+          "Win32_UI_InteractionContext" = [ "Win32_UI" ];
+          "Win32_UI_LegacyWindowsEnvironmentFeatures" = [ "Win32_UI" ];
+          "Win32_UI_Magnification" = [ "Win32_UI" ];
+          "Win32_UI_Notifications" = [ "Win32_UI" ];
+          "Win32_UI_Ribbon" = [ "Win32_UI" ];
+          "Win32_UI_Shell" = [ "Win32_UI" ];
+          "Win32_UI_Shell_Common" = [ "Win32_UI_Shell" ];
+          "Win32_UI_Shell_PropertiesSystem" = [ "Win32_UI_Shell" ];
+          "Win32_UI_TabletPC" = [ "Win32_UI" ];
+          "Win32_UI_TextServices" = [ "Win32_UI" ];
+          "Win32_UI_WindowsAndMessaging" = [ "Win32_UI" ];
+          "Win32_UI_Wpf" = [ "Win32_UI" ];
+          "Win32_UI_Xaml" = [ "Win32_UI" ];
+          "Win32_UI_Xaml_Diagnostics" = [ "Win32_UI_Xaml" ];
+          "Win32_Web" = [ "Win32" ];
+          "Win32_Web_MsHtml" = [ "Win32_Web" ];
+        };
+        resolvedDefaultFeatures = [ "Win32" "Win32_Foundation" "Win32_System" "Win32_System_LibraryLoader" "Win32_System_SystemServices" "Win32_System_WindowsProgramming" "default" ];
+      };
+      "windows_aarch64_msvc" = rec {
+        crateName = "windows_aarch64_msvc";
+        version = "0.32.0";
+        edition = "2018";
+        sha256 = "1x8bnafz15ksgpbjbgk1l1j2jx4rq4a2ylzcahb1jhy4n59jgsfq";
+        authors = [
+          "Microsoft"
+        ];
+
+      };
+      "windows_i686_gnu" = rec {
+        crateName = "windows_i686_gnu";
+        version = "0.32.0";
+        edition = "2018";
+        sha256 = "05g6kpdfxwxnw2gn1nrd7bsf5997rci0k3h3nqby168ph5l1qwba";
+        authors = [
+          "Microsoft"
+        ];
+
+      };
+      "windows_i686_msvc" = rec {
+        crateName = "windows_i686_msvc";
+        version = "0.32.0";
+        edition = "2018";
+        sha256 = "0wj1wi01fc8hrasbakjcq8y5a7ynw9l2mcw08svmsq823axi2v0l";
+        authors = [
+          "Microsoft"
+        ];
+
+      };
+      "windows_x86_64_gnu" = rec {
+        crateName = "windows_x86_64_gnu";
+        version = "0.32.0";
+        edition = "2018";
+        sha256 = "1g34xhcayig9sndq3555w95q6lr7jr839zxv6l365ijlfhpv24n9";
+        authors = [
+          "Microsoft"
+        ];
+
+      };
+      "windows_x86_64_msvc" = rec {
+        crateName = "windows_x86_64_msvc";
+        version = "0.32.0";
+        edition = "2018";
+        sha256 = "05l392h518dxn808dc1zkv6d0r9z38q68qqc0ix9fs9741v28jjh";
+        authors = [
+          "Microsoft"
         ];
 
       };
