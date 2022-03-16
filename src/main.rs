@@ -313,7 +313,7 @@ fn maybe_sign(config: &Config, name: &str, zone: &Zone, digest: &str, upstream_c
                 cmd.stderr(Stdio::inherit())
                 .stdout(Stdio::inherit())
                 .arg("-N")
-                .arg("keep")
+                .arg("unixtime")
                 .arg("-T")
                 .arg("300") // TTL
                 .arg("-t")
