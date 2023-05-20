@@ -2,17 +2,24 @@
 use serde_derive::Deserialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::net::Ipv4Addr;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
-  #[serde(default = "default_api_tcp_listen_port")]
-  pub api_tcp_listen_port: u16,
+  pub api: APIConfig,
   pub named_reload_command: Option<Vec<String>>,
   pub zones: HashMap<String, Zone>,
   pub zone_file_dir: PathBuf,
 }
 
-fn default_api_tcp_listen_port() -> u16 {
+#[derive(Clone, Debug, Deserialize)]
+pub struct APIConfig {
+  pub listen_addr: Ipv4Addr,
+  #[serde(default = "default_api_listen_port")]
+  pub listen_port: u16,
+}
+
+fn default_api_listen_port() -> u16 {
   8053
 }
 

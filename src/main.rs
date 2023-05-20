@@ -241,7 +241,7 @@ async fn spawn_api_server(config: &Config) {
         });
 
     warp::serve(hello)
-        .run(([127, 0, 0, 1], config.api_tcp_listen_port))
+        .run((config.api.listen_addr, config.api.listen_port))
         .await;
 }
 

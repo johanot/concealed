@@ -1,4 +1,7 @@
 {
+  "api": {
+    "listen_addr": "0.0.0.0"
+  },
   "zone_file_dir": "./zones",
   "zones": {
     "kronborgthomsen.dk": {
