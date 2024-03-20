@@ -59,7 +59,7 @@
         bind
         cargo
         openssl.dev
-        pkgconfig
+        pkg-config
         rustc
         rustfmt
       ];
