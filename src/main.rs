@@ -26,6 +26,7 @@ use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::sync::RwLock;
 use chrono::Duration;
+use clap::{command, arg};
 
 mod config;
 mod keyparser;
@@ -39,30 +40,28 @@ lazy_static! {
 async fn main() {
     env_logger::init();
 
-    let args = clap::App::new("concealed")
+    let args = command!()
         .arg(
-            clap::Arg::with_name("config")
-                .long("config")
-                .help("Path to JSON config file")
-                .takes_value(true)
-                .required(true),
+            arg!(configcheck: "Parses Concealed config file and exits")
+                .long("config-check")
+                .action(clap::ArgAction::SetTrue),
         )
         .arg(
-            clap::Arg::with_name("config-check")
-                .long("config-check")
-                .help("Whether to just parse and check the config file and exit")
-                .takes_value(false)
-                .required(false),
+            arg!(config: "Path to Concealed JSON config file")
+                .long("config")
+                .help("Path to Concealed JSON config file")
+                .required(true),
         );
 
     let m = args.get_matches();
 
-    let file_path = m.value_of("config").unwrap();
-    let file = File::open(&file_path).unwrap();
+    let config_check = m.get_flag("configcheck");
+    let config_file = m.get_one::<String>("config").unwrap().to_owned();
+    let file = File::open(&config_file).unwrap();
     let reader = BufReader::new(file);
     let config: Config = serde_json::from_reader(reader).unwrap();
 
-    if m.is_present("config-check") {
+    if config_check {
         std::process::exit(0);
     }
 
