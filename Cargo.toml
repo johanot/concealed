@@ -5,22 +5,22 @@ authors = ["Johan Thomsen <johanot@users.noreply.github.com>"]
 edition = "2021"
 
 [dependencies]
+askama = "0"
+bytes = "1"
 clap = { version = "=4.4", features = ["cargo"] } # We force 4.4 so we don't have to use rustc 1.74
 chrono = "0"
+dbc-rust-modules = { git = "https://github.com/dbcdk/rust-modules", branch = "main" }
+env_logger = "0"
 lazy_static = "1"
+log = "0"
+rand = "0"
+regex = "1"
 serde = "1"
 serde_derive = "1"
 serde_json = "1"
-tokio = { version = "1", features = [ "full" ] }
-env_logger = "0"
-log = "0"
-warp = "0"
-bytes = "1"
-askama = "0"
 sha2 = "0"
-rand = "0"
-regex = "1"
 strum = { version = "0", features = ["derive"] }
 tempdir = "0"
-dbc-rust-modules = { git = "https://github.com/dbcdk/rust-modules", branch = "main" }
+tokio = { version = "1", features = [ "full" ] }
 walkdir = "2"
+warp = "0"
