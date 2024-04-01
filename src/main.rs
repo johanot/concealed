@@ -149,7 +149,7 @@ async fn check_dnssec_key_validity(name: &str, zone: &Zone) -> (Vec<DNSSecKey>,V
         match newest_renewal_candidate {
             Some(k) => {
                 debug!("considering dnssec key: {}", &k.name);
-                if k.inactive.is_some() && now.checked_add_signed(Duration::days(45)).unwrap() > k.inactive.unwrap() {
+                if k.inactive.is_some() && now.checked_add_signed(Duration::try_days(45).unwrap()).unwrap() > k.inactive.unwrap() {
                     info!("renewing dnssec-key for zone: {}, key-name: {}", &name, &k.name);
                     let key_parts = keyparser::successor_dnssec_key_via_temp(&k).unwrap();
                     for (k, v) in &key_parts {

@@ -2,22 +2,17 @@
 use chrono::prelude::*;
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::string::ToString;
-use strum::EnumString;
-use strum::ToString;
+use strum::{Display, EnumString};
 use walkdir::WalkDir;
-use walkdir::DirEntry;
 use std::path::Path;
 
-use log::info;
-
-#[derive(Copy, Clone, Debug, PartialEq, EnumString, ToString)]
+#[derive(Copy, Clone, Display, Debug, PartialEq, EnumString)]
 pub enum DNSSecKeyType {
     KSK,
     ZSK,
@@ -134,7 +129,7 @@ pub fn parse(pub_key: &Secret, priv_key: &Secret) -> Result<DNSSecKey, ParseErro
 fn parse_date(input: Option<String>) -> Option<DateTime<Utc>> {
     input.and_then(|d| {
         Some(NaiveDateTime::parse_from_str(&d, "%Y%m%d%H%M%S").unwrap())
-            .map(|d| DateTime::from_utc(d, Utc))
+            .map(|d| DateTime::from_naive_utc_and_offset(d, Utc))
     })
 }
 
@@ -144,13 +139,6 @@ use dbc_rust_modules::exec::Wait;
 use std::fs;
 use std::process::Command;
 use tempdir::TempDir;
-
-pub fn new_dnssec_key_via_temp(
-    zone: &str,
-    key_type: DNSSecKeyType,
-) -> Result<HashMap<String, String>, ExecErrorInfo> {
-    dnssec_key_via_temp(zone, key_type, None)
-}
 
 pub fn successor_dnssec_key_via_temp(
     prev: &DNSSecKey,
