@@ -20,7 +20,7 @@ serde_derive = "1"
 serde_json = "1"
 sha2 = "0"
 strum = { version = "0", features = ["derive"] }
-tempdir = "0"
+tempfile = "3"
 tokio = { version = "1", features = [ "full" ] }
 walkdir = "2"
 warp = "0"

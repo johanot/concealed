@@ -11,6 +11,7 @@ use std::string::ToString;
 use strum::{Display, EnumString};
 use walkdir::WalkDir;
 use std::path::Path;
+use tempfile::TempDir;
 
 #[derive(Copy, Clone, Display, Debug, PartialEq, EnumString)]
 pub enum DNSSecKeyType {
@@ -138,7 +139,6 @@ use dbc_rust_modules::exec::SpawnOk;
 use dbc_rust_modules::exec::Wait;
 use std::fs;
 use std::process::Command;
-use tempdir::TempDir;
 
 pub fn successor_dnssec_key_via_temp(
     prev: &DNSSecKey,
@@ -152,7 +152,7 @@ fn dnssec_key_via_temp(
     key_type: DNSSecKeyType,
     prev_key: Option<&DNSSecKey>,
 ) -> Result<HashMap<String, String>, ExecErrorInfo> {
-    let tmp_dir = TempDir::new("keys").unwrap();
+    let tmp_dir = TempDir::new().unwrap();
     let bits: u16 = match key_type {
         DNSSecKeyType::KSK => 4096,
         DNSSecKeyType::ZSK => 2048,
