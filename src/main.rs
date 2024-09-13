@@ -27,6 +27,7 @@ use std::collections::HashMap;
 use std::sync::RwLock;
 use chrono::Duration;
 use clap::{command, arg};
+use serde_derive::Deserialize;
 
 mod config;
 mod keyparser;
@@ -35,6 +36,27 @@ lazy_static! {
     static ref ZONES: RwLock<HashMap<String, Zone>> =
         RwLock::new(HashMap::new());
 }
+
+#[derive(Debug, Deserialize)]
+struct FaythePayload {
+  records: HashMap<String, FaytheRecord>,
+}
+
+
+#[derive(Debug, Deserialize)]
+struct FaytheRecord {
+  #[serde(rename = "type")]
+  #[allow(dead_code)]
+  record_type: FaytheRecordType,
+  content: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+enum FaytheRecordType {
+  TXT,
+}
+
 
 #[tokio::main]
 async fn main() {
@@ -187,33 +209,30 @@ async fn check_dnssec_key_validity(name: &str, zone: &Zone) -> (Vec<DNSSecKey>,V
     }
 }
 
-async fn spawn_api_server(config: &Config) {
-    let hello = warp::put()
-        .and(warp::path!("TXT" / String))
-        .and(warp::body::content_length_limit(1024 * 16))
-        .and(warp::body::bytes())
-        .map(|name: String, bytes: bytes::Bytes| {
-            let name = name.trim_end_matches('.');
-            let zm = ZONES.read().unwrap().iter().find(|(n, _)| {
-                name.ends_with(n.as_str())
-            })
-            .map(|(n, _)| {
-                n.to_owned()
-            });
+fn insert_record(name: &str, record: &FaytheRecord) -> Result<(), String> {
+    let name = name.trim_end_matches('.');
+    let zm = ZONES.read().unwrap().iter().find(|(n, _)| {
+        name.ends_with(n.as_str())
+    })
+    .map(|(n, _)| {
+        n.to_owned()
+    });
 
-            if let Some(zone) = zm {
-                let zone = zone.trim_end_matches('.');
-                let name = name.strip_suffix(zone).unwrap_or(name);
-                let name = name.trim_end_matches('.');
+    if let Some(zone) = zm {
+        let zone = zone.trim_end_matches('.');
+        let name = name.strip_suffix(zone).unwrap_or(name);
+        let name = name.trim_end_matches('.');
 
-                let mut guard = ZONES.write().unwrap();
-                let records = &mut guard
-                    .get_mut(zone)
-                    .unwrap()
-                    .records;
+        let mut guard = ZONES.write().unwrap();
+        let records = &mut guard
+            .get_mut(zone)
+            .unwrap()
+            .records;
 
+        match &record.content {
+            Some(c) => {
                 let new_record = Record{
-                    target: String::from_utf8(bytes.to_vec()).unwrap(),
+                    target: c.to_owned(),
                     ttl_seconds: 300,
                     record_type: "TXT".to_string(),
                     priority: None,
@@ -221,22 +240,30 @@ async fn spawn_api_server(config: &Config) {
 
                 //always override whatever records that might exist
                 records.insert(name.to_owned(), vec!(new_record));
+                Ok(())
+            },
+            None => Err("No content in record".to_string()),
+        }
+    } else {
+        Err("Not authority for zone".to_string())
+    }
+}
 
-            /*
-                if !records.contains_key(&name) {
-                    records.insert(name.clone(), vec!());
+async fn spawn_api_server(config: &Config) {
+    let hello = warp::put()
+        .and(warp::path!("faythe"))
+        .and(warp::body::content_length_limit(1024 * 16))
+        .and(warp::body::json())
+        .map(|payload: FaythePayload| {
+
+            let mut error_messages = vec!();
+            for (name, record) in &payload.records {
+                match insert_record(&name, &record) {
+                    Ok(_) => {},
+                    Err(msg) => error_messages.push(msg),
                 }
-
-                records.get_mut(&name).map(|list| {
-                    list.push(new_record);
-                });
-            */
-
-                "".to_string()
-
-            } else {
-                "Not authority for zone".to_string()
             }
+            error_messages.join("\n")
         });
 
     warp::serve(hello)
