@@ -13,6 +13,7 @@ dbc-rust-modules = { git = "https://github.com/dbcdk/rust-modules", branch = "ma
 env_logger = "0"
 lazy_static = "1"
 log = "0"
+indexmap = { version = "2", features = ["serde"] }
 rand = "0"
 regex = "1"
 serde = "1"

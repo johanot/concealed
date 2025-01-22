@@ -3,6 +3,7 @@ use serde_derive::Deserialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::net::Ipv4Addr;
+use indexmap::map::IndexMap;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
@@ -28,7 +29,7 @@ pub struct Zone {
   pub apex: Vec<Record>,
   #[serde(rename = "dnssecKeyDirectory")]
   pub dnssec_key_directory: Option<PathBuf>,
-  pub records: HashMap<String, Vec<Record>>,
+  pub records: IndexMap<String, Vec<Record>>,
   //SOA stuff
   pub server: String,
   pub expire: String,
