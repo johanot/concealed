@@ -4,8 +4,10 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::net::Ipv4Addr;
 use indexmap::map::IndexMap;
+use reqwest::Url;
+use serde::{Deserialize, Deserializer};
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Config {
   pub api: APIConfig,
   pub named_reload_command: Option<Vec<String>>,
@@ -46,6 +48,39 @@ pub struct Record {
   #[serde(rename = "type")]
   pub record_type: String,
   pub priority: Option<u32>,
+  pub condition: Option<Condition>,
+  #[serde(default = "default_enabled")]
+  pub enabled: bool,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub enum Condition {
+  #[serde(rename = "http")]
+  Http {
+    #[serde(deserialize_with = "deserialize_url")]
+    url: Url,
+    status: u16,
+    timeout: u16,
+    interval: u16,
+    transition: Transition,
+  },
+}
+
+
+fn default_enabled() -> bool {
+  true
+}
+
+fn deserialize_url<'de, D>(data: D) -> Result<Url, D::Error> where D: Deserializer<'de>,
+{
+  let s: String = Deserialize::deserialize(data)?;
+  Url::parse(&s).map_err(serde::de::Error::custom)
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct Transition {
+  pub interval: u16,
+  pub repeat: u32,
 }
 
 impl Record {

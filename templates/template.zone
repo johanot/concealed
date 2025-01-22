@@ -1,11 +1,15 @@
 {{ name }}. 3600 IN SOA {{ zone.server }}. hostmaster.{{ name }}. {{ serial }} {{ zone.refresh }} {{ zone.retry }} {{ zone.expire }} {{ zone.ttl }}
 
 {% for r in zone.apex %}
+{% if r.enabled %}
 {{ name }}. {{ r.ttl_seconds }} IN {{ r.record_type }}{% match r.priority %}{% when Some with (val) %} {{ val }}{% when None %}{% endmatch %} {{ r.target }}{% if r.trailing_dot() %}.{% else %}{% endif %}
+{% endif %}
 {% endfor %}
 
 {% for (n, rr) in zone.records %}
   {% for r in rr %}
+{% if r.enabled %}
 {{ n }}.{{ name }}. {{ r.ttl_seconds }} IN {{ r.record_type }}{% match r.priority %}{% when Some with (val) %} {{ val }}{% when None %}{% endmatch %} {{ r.target }}{% if r.trailing_dot() %}.{% else %}{% endif %}
+{% endif %}
   {% endfor %}
 {% endfor %}

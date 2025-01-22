@@ -1,4 +1,4 @@
-use log::{debug, error, info, warn};
+use log::{debug, error, info, warn, trace};
 use crate::config::{Config, Zone, Record};
 use crate::keyparser::DNSSecKey;
 
@@ -24,10 +24,15 @@ use regex::Regex;
 
 use lazy_static::lazy_static;
 use std::collections::HashMap;
-use std::sync::RwLock;
+use tokio::sync::RwLock;
 use chrono::Duration;
 use clap::{command, arg};
 use serde_derive::Deserialize;
+use config::Condition;
+use tokio::task::JoinSet;
+
+use std::convert::Infallible;
+use reqwest::Client;
 
 mod config;
 mod keyparser;
@@ -57,6 +62,11 @@ enum FaytheRecordType {
   TXT,
 }
 
+#[derive(Debug)]
+enum RecordOrApex {
+    Record(String),
+    Apex,
+}
 
 #[tokio::main]
 async fn main() {
@@ -87,20 +97,187 @@ async fn main() {
         std::process::exit(0);
     }
 
+    let mut set = JoinSet::new();
+
+    // for each record with condition, spawn a task to monitor the condition
+    // and update the record if the condition changes
+    for (zone_name, zone) in &config.zones {
+        for record in &zone.apex {
+            if let Some(condition) = &record.condition {
+                let record_or_apex = RecordOrApex::Apex;
+                set.spawn(condition_monitor(config.clone(), zone_name.clone(), record_or_apex, record.clone(), condition.clone()));
+            }
+        }
+        for (record_name, records) in &zone.records {
+            for record in records {
+                if let Some(condition) = &record.condition {
+                    let record_or_apex = RecordOrApex::Record(record_name.clone());
+                    set.spawn(condition_monitor(config.clone(), zone_name.clone(), record_or_apex, record.clone(), condition.clone()));
+                }
+            }
+        }
+    }
+
     {
-        let mut guard = ZONES.write().unwrap();
+        let mut guard = ZONES.write().await;
         for (n, z) in &config.zones {
             guard.insert(n.clone(), z.to_owned());
         }
     }
+    set.spawn(reconcile_zones(config.clone()));
+    set.spawn(spawn_api_server(config.clone()));
 
-    tokio::join!(
-        reconcile_zones(&config),
-        spawn_api_server(&config),
-    );
+    set.join_all().await;
 }
 
-async fn reconcile_zones(config: &Config) {
+#[derive(Debug)]
+enum TransitionStatus {
+    Up,
+    GoingDown { failures: u32 },
+    GoingUp { successes: u32 },
+    Down,
+}
+
+async fn condition_monitor(config: Config, zone_name: String, record_or_apex: RecordOrApex, record: Record, condition: Condition) {
+    let mut transition_status = TransitionStatus::Up; //TODO: maybe improve thise to "unknown" or something
+    
+    let update_transition_status = |status: &mut TransitionStatus, success: bool, threshold: u32, r: &mut Record| {
+        debug!("updating transition status: {:?}, success: {}, threshold: {}", status, success, threshold);
+
+        match status {
+            TransitionStatus::Up => {
+                if success {
+                    *status = TransitionStatus::Up;
+                } else {
+                    *status = TransitionStatus::GoingDown { failures: 1 };
+                }
+            },
+            TransitionStatus::GoingDown { failures } => {
+                if !success && *failures >= threshold {
+                    *status = TransitionStatus::Down;
+                    info!("transitioned zone: {}, record target: {} to state DOWN", zone_name, r.target);
+                    r.enabled = false;
+                } else if !success {
+                    *status = TransitionStatus::GoingDown { failures: *failures + 1 };
+                } else {
+                    *status = TransitionStatus::GoingUp { successes: 1 };
+                }
+            },
+            TransitionStatus::GoingUp { successes } => {
+                if success && *successes >= threshold {
+                    *status = TransitionStatus::Up;
+                    info!("transitioned zone: {}, record target: {} to state UP", zone_name, r.target);
+                    r.enabled = true;
+                } else if success {
+                    *status = TransitionStatus::GoingUp { successes: *successes + 1 };
+                } else {
+                    *status = TransitionStatus::GoingDown { failures: 1 };
+                }
+            },
+            TransitionStatus::Down => {
+                if success {
+                    *status = TransitionStatus::GoingUp { successes: 1 };
+                } else {
+                    *status = TransitionStatus::Down;
+                }
+            },
+        }
+    };
+
+    match condition {
+        config::Condition::Http { url, status, timeout, interval, transition } => {
+            info!("monitoring condition for zone: {}, {:?}, url: {}, status: {}, timeout: {}, interval: {}", zone_name, record_or_apex, url, status, timeout, interval);
+            loop {
+                let client = Client::builder()
+                    .timeout(std::time::Duration::from_secs(timeout as u64))
+                    .build()
+                    .unwrap();
+
+                match client
+                    .get(url.to_owned())
+                    .send()
+                    .await {
+                    Ok(response) => {
+                        let mut guard =
+                            ZONES
+                            .write()
+                            .await;
+
+                        let zone = guard
+                            .get_mut(&zone_name)
+                            .unwrap();
+
+                        match &record_or_apex {
+                            RecordOrApex::Record(record_name) => {
+                                zone
+                                .records
+                                .get_mut(record_name)
+                                .unwrap()
+                                .iter_mut()
+                                .find(|r| r.target == record.target)
+                                .map(|r| {
+                                    debug!("condition for: {:?}, response status: {}", record_or_apex, response.status().as_u16());
+                                    update_transition_status(&mut transition_status, response.status().as_u16() == status, transition.repeat, r);
+                                });
+                            },
+                            RecordOrApex::Apex => {
+                                zone
+                                .apex
+                                .iter_mut()
+                                .find(|r| r.target == record.target)
+                                .map(|r| {
+                                    debug!("condition for: {:?}, response status: {}", record_or_apex, response.status().as_u16());
+                                    update_transition_status(&mut transition_status, response.status().as_u16() == status, transition.repeat, r);
+                                });
+                            },
+                        }
+                    },
+                    Err(e) => {
+                        error!("condition for: {:?}, failed with error: {:?}", record_or_apex, e);
+                        let mut guard =
+                            ZONES
+                            .write()
+                            .await;
+
+                        let zone = guard
+                            .get_mut(&zone_name)
+                            .unwrap();
+
+                        match &record_or_apex {
+                            RecordOrApex::Record(record_name) => {
+                                zone
+                                .records
+                                .get_mut(record_name)
+                                .unwrap()
+                                .iter_mut()
+                                .find(|r| r.target == record.target)
+                                .map(|r| {
+                                    update_transition_status(&mut transition_status, false, transition.repeat, r);
+                                });
+                            },
+                            RecordOrApex::Apex => {
+                                zone
+                                .apex
+                                .iter_mut()
+                                .find(|r| r.target == record.target)
+                                .map(|r| {
+                                    update_transition_status(&mut transition_status, false, transition.repeat, r);
+                                });
+                            },
+                        }
+                    }
+                }
+                let actual_interval = match &transition_status {
+                    TransitionStatus::GoingDown { .. } | TransitionStatus::GoingUp { .. } => transition.interval,
+                    _ => interval,
+                };
+                tokio::time::sleep(tokio::time::Duration::from_secs(actual_interval as u64)).await;
+            }
+        }
+    }
+}
+
+async fn reconcile_zones(config: Config) {
     let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(5));
 
     let mut reload_cmd = config.named_reload_command
@@ -122,7 +299,7 @@ async fn reconcile_zones(config: &Config) {
         let mut reload_needed = false;
 
         {
-            let guard = ZONES.read().unwrap();
+            let guard = ZONES.read().await;
             for (n, z) in guard.iter() {
                 let (active_keys, prepub_keys): (Vec<DNSSecKey>, Vec<DNSSecKey>) = check_dnssec_key_validity(&n, &z).await;
                 let (content, digest) = render_zonefile(&n, &z, serial);
@@ -209,9 +386,9 @@ async fn check_dnssec_key_validity(name: &str, zone: &Zone) -> (Vec<DNSSecKey>,V
     }
 }
 
-fn insert_record(name: &str, record: &FaytheRecord) -> Result<(), String> {
+async fn insert_record(name: &str, record: &FaytheRecord) -> Result<(), String> {
     let name = name.trim_end_matches('.');
-    let zm = ZONES.read().unwrap().iter().find(|(n, _)| {
+    let zm = ZONES.read().await.iter().find(|(n, _)| {
         name.ends_with(n.as_str())
     })
     .map(|(n, _)| {
@@ -223,7 +400,7 @@ fn insert_record(name: &str, record: &FaytheRecord) -> Result<(), String> {
         let name = name.strip_suffix(zone).unwrap_or(name);
         let name = name.trim_end_matches('.');
 
-        let mut guard = ZONES.write().unwrap();
+        let mut guard = ZONES.write().await;
         let records = &mut guard
             .get_mut(zone)
             .unwrap()
@@ -236,6 +413,8 @@ fn insert_record(name: &str, record: &FaytheRecord) -> Result<(), String> {
                     ttl_seconds: 300,
                     record_type: "TXT".to_string(),
                     priority: None,
+                    condition: None,
+                    enabled: true,
                 };
 
                 //always override whatever records that might exist
@@ -249,21 +428,20 @@ fn insert_record(name: &str, record: &FaytheRecord) -> Result<(), String> {
     }
 }
 
-async fn spawn_api_server(config: &Config) {
+async fn spawn_api_server(config: Config) {
     let hello = warp::put()
         .and(warp::path!("faythe"))
         .and(warp::body::content_length_limit(1024 * 16))
         .and(warp::body::json())
-        .map(|payload: FaythePayload| {
-
+        .and_then(|payload: FaythePayload| async move {
             let mut error_messages = vec!();
             for (name, record) in &payload.records {
-                match insert_record(&name, &record) {
+                match insert_record(&name, &record).await {
                     Ok(_) => {},
                     Err(msg) => error_messages.push(msg),
                 }
             }
-            error_messages.join("\n")
+            Ok::<std::string::String, Infallible>(error_messages.join("\n"))
         });
 
     warp::serve(hello)
@@ -314,7 +492,7 @@ fn maybe_persist(config: &Config, name: &str, content: &str, digest: &str) -> bo
         symlink_in_place(&temp_path, &final_path);
         true
     } else {
-        debug!("not changing symlink: {:?}", &temp_path);
+        trace!("not changing symlink: {:?}", &temp_path);
         false
     }
 }

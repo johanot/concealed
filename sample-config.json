@@ -4,6 +4,39 @@
   },
   "zone_file_dir": "./zones",
   "zones": {
+    "high-availabilty.dk": {
+      "apex": [{
+        "target": "1.2.3.4",
+        "ttl": "5m",
+        "ttlSeconds": 300,
+        "type": "A",
+        "condition": {
+          "http": {
+            "url": "http://127.0.0.1:8080",
+            "status": 404,
+            "timeout": 5,
+            "interval": 6,
+            "transition": {
+              "interval": 2,
+              "repeat": 3
+            }
+          }
+        }
+      },
+      {
+        "target": "8.8.8.8",
+        "ttl": "5m",
+        "ttlSeconds": 300,
+        "type": "A"
+      }],
+      "records": {},
+      "server": "localhost",
+      "expire": "1w",
+      "refresh": "1h",
+      "retry": "5m",
+      "ttl": "2m",
+      "updatePolicies": []
+    },
     "kronborgthomsen.dk": {
       "apex": [
         {
