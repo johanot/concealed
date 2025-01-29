@@ -10,6 +10,7 @@ bytes = "1"
 clap = { version = "=4.4", features = ["cargo"] } # We force 4.4 so we don't have to use rustc 1.74
 chrono = "0"
 dbc-rust-modules = { git = "https://github.com/dbcdk/rust-modules", branch = "main" }
+derivative = "2"
 env_logger = "0"
 lazy_static = "1"
 log = "0"

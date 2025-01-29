@@ -6,6 +6,7 @@ use std::net::Ipv4Addr;
 use indexmap::map::IndexMap;
 use reqwest::Url;
 use serde::{Deserialize, Deserializer};
+use derivative::Derivative;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
@@ -40,7 +41,8 @@ pub struct Zone {
   pub ttl: String,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Derivative, Clone, Debug, Deserialize)]
+#[derivative(PartialEq, Eq, Hash)]
 pub struct Record {
   pub target: String,
   #[serde(rename = "ttlSeconds")]
@@ -50,10 +52,12 @@ pub struct Record {
   pub priority: Option<u32>,
   pub condition: Option<Condition>,
   #[serde(default = "default_enabled")]
+  #[derivative(PartialEq="ignore")]
+  #[derivative(Hash="ignore")]
   pub enabled: bool,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Hash, Eq, PartialEq)]
 pub enum Condition {
   #[serde(rename = "http")]
   Http {
@@ -77,7 +81,7 @@ fn deserialize_url<'de, D>(data: D) -> Result<Url, D::Error> where D: Deserializ
   Url::parse(&s).map_err(serde::de::Error::custom)
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Hash, Eq, PartialEq)]
 pub struct Transition {
   pub interval: u16,
   pub repeat: u32,

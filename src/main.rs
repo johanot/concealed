@@ -23,7 +23,7 @@ use sha2::{Sha256, Digest};
 use regex::Regex;
 
 use lazy_static::lazy_static;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use tokio::sync::RwLock;
 use chrono::Duration;
 use clap::{command, arg};
@@ -40,6 +40,9 @@ mod keyparser;
 lazy_static! {
     static ref ZONES: RwLock<HashMap<String, Zone>> =
         RwLock::new(HashMap::new());
+
+    static ref UNKNOWN_STATE_INDEX: std::sync::RwLock<HashSet<Record>> =
+        std::sync::RwLock::new(HashSet::new());
 }
 
 #[derive(Debug, Deserialize)]
@@ -104,6 +107,7 @@ async fn main() {
     for (zone_name, zone) in &config.zones {
         for record in &zone.apex {
             if let Some(condition) = &record.condition {
+                UNKNOWN_STATE_INDEX.write().unwrap().insert(record.clone());
                 let record_or_apex = RecordOrApex::Apex;
                 set.spawn(condition_monitor(config.clone(), zone_name.clone(), record_or_apex, record.clone(), condition.clone()));
             }
@@ -111,6 +115,7 @@ async fn main() {
         for (record_name, records) in &zone.records {
             for record in records {
                 if let Some(condition) = &record.condition {
+                    UNKNOWN_STATE_INDEX.write().unwrap().insert(record.clone());
                     let record_or_apex = RecordOrApex::Record(record_name.clone());
                     set.spawn(condition_monitor(config.clone(), zone_name.clone(), record_or_apex, record.clone(), condition.clone()));
                 }
@@ -132,6 +137,7 @@ async fn main() {
 
 #[derive(Debug)]
 enum TransitionStatus {
+    Unknown,
     Up,
     GoingDown { failures: u32 },
     GoingUp { successes: u32 },
@@ -139,12 +145,18 @@ enum TransitionStatus {
 }
 
 async fn condition_monitor(config: Config, zone_name: String, record_or_apex: RecordOrApex, record: Record, condition: Condition) {
-    let mut transition_status = TransitionStatus::Up; //TODO: maybe improve thise to "unknown" or something
-    
-    let update_transition_status = |status: &mut TransitionStatus, success: bool, threshold: u32, r: &mut Record| {
-        debug!("updating transition status: {:?}, success: {}, threshold: {}", status, success, threshold);
+    let mut transition_status = TransitionStatus::Unknown;
 
-        match status {
+    let update_transition_status = |status: &mut TransitionStatus, success: bool, threshold: u32, r: &mut Record| -> bool {
+       let mut status_known_now = false;
+       match status {
+            TransitionStatus::Unknown => {
+                if success {
+                    *status = TransitionStatus::GoingUp { successes: 1 };
+                } else {
+                    *status = TransitionStatus::GoingDown { failures: 1 };
+                }
+            },
             TransitionStatus::Up => {
                 if success {
                     *status = TransitionStatus::Up;
@@ -157,6 +169,7 @@ async fn condition_monitor(config: Config, zone_name: String, record_or_apex: Re
                     *status = TransitionStatus::Down;
                     info!("transitioned zone: {}, record target: {} to state DOWN", zone_name, r.target);
                     r.enabled = false;
+                    status_known_now = true;
                 } else if !success {
                     *status = TransitionStatus::GoingDown { failures: *failures + 1 };
                 } else {
@@ -168,6 +181,7 @@ async fn condition_monitor(config: Config, zone_name: String, record_or_apex: Re
                     *status = TransitionStatus::Up;
                     info!("transitioned zone: {}, record target: {} to state UP", zone_name, r.target);
                     r.enabled = true;
+                    status_known_now = true;
                 } else if success {
                     *status = TransitionStatus::GoingUp { successes: *successes + 1 };
                 } else {
@@ -182,6 +196,8 @@ async fn condition_monitor(config: Config, zone_name: String, record_or_apex: Re
                 }
             },
         }
+        debug!("updating transition status: {:?}, success: {}, threshold: {}", status, success, threshold);
+        status_known_now
     };
 
     match condition {
@@ -214,20 +230,32 @@ async fn condition_monitor(config: Config, zone_name: String, record_or_apex: Re
                                 .get_mut(record_name)
                                 .unwrap()
                                 .iter_mut()
-                                .find(|r| r.target == record.target)
+                                .find(|r| r.target == record.target && r.record_type == record.record_type)
                                 .map(|r| {
                                     debug!("condition for: {:?}, response status: {}", record_or_apex, response.status().as_u16());
-                                    update_transition_status(&mut transition_status, response.status().as_u16() == status, transition.repeat, r);
+                                    let state_known_now = update_transition_status(&mut transition_status, response.status().as_u16() == status, transition.repeat, r);
+                                    if !UNKNOWN_STATE_INDEX.read().unwrap().is_empty() {
+                                        let mut guard = UNKNOWN_STATE_INDEX.write().unwrap();
+                                        if state_known_now {
+                                            guard.remove(r);
+                                        }
+                                    }
                                 });
                             },
                             RecordOrApex::Apex => {
                                 zone
                                 .apex
                                 .iter_mut()
-                                .find(|r| r.target == record.target)
+                                .find(|r| r.target == record.target && r.record_type == record.record_type)
                                 .map(|r| {
                                     debug!("condition for: {:?}, response status: {}", record_or_apex, response.status().as_u16());
-                                    update_transition_status(&mut transition_status, response.status().as_u16() == status, transition.repeat, r);
+                                    let state_known_now = update_transition_status(&mut transition_status, response.status().as_u16() == status, transition.repeat, r);
+                                    if !UNKNOWN_STATE_INDEX.read().unwrap().is_empty() {
+                                        let mut guard = UNKNOWN_STATE_INDEX.write().unwrap();
+                                        if state_known_now {
+                                            guard.remove(r);
+                                        }
+                                    }
                                 });
                             },
                         }
@@ -250,18 +278,30 @@ async fn condition_monitor(config: Config, zone_name: String, record_or_apex: Re
                                 .get_mut(record_name)
                                 .unwrap()
                                 .iter_mut()
-                                .find(|r| r.target == record.target)
+                                .find(|r| r.target == record.target && r.record_type == record.record_type)
                                 .map(|r| {
-                                    update_transition_status(&mut transition_status, false, transition.repeat, r);
+                                    let state_known_now = update_transition_status(&mut transition_status, false, transition.repeat, r);
+                                    if !UNKNOWN_STATE_INDEX.read().unwrap().is_empty() {
+                                        let mut guard = UNKNOWN_STATE_INDEX.write().unwrap();
+                                        if state_known_now {
+                                            guard.remove(r);
+                                        }
+                                    }
                                 });
                             },
                             RecordOrApex::Apex => {
                                 zone
                                 .apex
                                 .iter_mut()
-                                .find(|r| r.target == record.target)
+                                .find(|r| r.target == record.target && r.record_type == record.record_type)
                                 .map(|r| {
-                                    update_transition_status(&mut transition_status, false, transition.repeat, r);
+                                    let state_known_now = update_transition_status(&mut transition_status, false, transition.repeat, r);
+                                    if !UNKNOWN_STATE_INDEX.read().unwrap().is_empty() {
+                                        let mut guard = UNKNOWN_STATE_INDEX.write().unwrap();
+                                        if state_known_now {
+                                            guard.remove(r);
+                                        }
+                                    }
                                 });
                             },
                         }
@@ -293,29 +333,34 @@ async fn reconcile_zones(config: Config) {
         });
 
     loop {
-        std::fs::create_dir_all(&config.zone_file_dir.canonicalize().unwrap()).unwrap();
-        let now = Utc::now();
-        let serial = now.timestamp() as u32;
-        let mut reload_needed = false;
+        debug!("unknown state conditions: {}", UNKNOWN_STATE_INDEX.read().unwrap().len());
+        if UNKNOWN_STATE_INDEX.read().unwrap().is_empty() {
+            std::fs::create_dir_all(&config.zone_file_dir.canonicalize().unwrap()).unwrap();
+            let now = Utc::now();
+            let serial = now.timestamp() as u32;
+            let mut reload_needed = false;
 
-        {
-            let guard = ZONES.read().await;
-            for (n, z) in guard.iter() {
-                let (active_keys, prepub_keys): (Vec<DNSSecKey>, Vec<DNSSecKey>) = check_dnssec_key_validity(&n, &z).await;
-                let (content, digest) = render_zonefile(&n, &z, serial);
-                let changed = maybe_persist(&config, &n, &content, &digest);
-                let signed = maybe_sign(&config, &n, &z, &digest, changed, active_keys, prepub_keys);
-                reload_needed = reload_needed || changed || signed;
+            {
+                let guard = ZONES.read().await;
+                for (n, z) in guard.iter() {
+                    let (active_keys, prepub_keys): (Vec<DNSSecKey>, Vec<DNSSecKey>) = check_dnssec_key_validity(&n, &z).await;
+                    let (content, digest) = render_zonefile(&n, &z, serial);
+                    let changed = maybe_persist(&config, &n, &content, &digest);
+                    let signed = maybe_sign(&config, &n, &z, &digest, changed, active_keys, prepub_keys);
+                    reload_needed = reload_needed || changed || signed;
+                }
             }
-        }
 
-        if reload_cmd.is_some() && reload_needed {
-            let reload_cmd = reload_cmd.as_mut().unwrap();
-            info!("executing reload command: {:?}", &reload_cmd);
-            let status = reload_cmd.status().unwrap();
-            if !status.success() {
-                error!("named reload failed with exit code: {:?}", &status.code());
+            if reload_cmd.is_some() && reload_needed {
+                let reload_cmd = reload_cmd.as_mut().unwrap();
+                info!("executing reload command: {:?}", &reload_cmd);
+                let status = reload_cmd.status().unwrap();
+                if !status.success() {
+                    error!("named reload failed with exit code: {:?}", &status.code());
+                }
             }
+        } else {
+            warn!("cannot update zone: waiting for all conditions to be known ...");
         }
         interval.tick().await;
     }
