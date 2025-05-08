@@ -5,9 +5,9 @@ authors = ["Johan Thomsen <johanot@users.noreply.github.com>"]
 edition = "2021"
 
 [dependencies]
-askama = "0"
+askama = "0.13" # pin for now, due to rustc versions
 bytes = "1"
-clap = { version = "=4.4", features = ["cargo"] } # We force 4.4 so we don't have to use rustc 1.74
+clap = { version = "4", features = ["cargo"] }
 chrono = "0"
 dbc-rust-modules = { git = "https://github.com/dbcdk/rust-modules", branch = "main" }
 derivative = "2"
