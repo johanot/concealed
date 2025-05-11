@@ -8,7 +8,7 @@ use std::io::Write;
 use std::process::Command;
 use std::process::Stdio;
 use std::path::Path;
-use rand::{distributions::Alphanumeric, Rng}; 
+use rand::{distr::Alphanumeric, Rng};
 
 use warp::Filter;
 
